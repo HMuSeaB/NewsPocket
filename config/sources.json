@@ -1,0 +1,126 @@
+{
+  "sources": [
+    {
+      "name": "36氪",
+      "url": "https://36kr.com/feed",
+      "category": "行业动态",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": true
+    },
+    {
+      "name": "少数派",
+      "url": "https://sspai.com/feed",
+      "category": "科技生活",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": true
+    },
+    {
+      "name": "Hacker News",
+      "url": "https://hnrss.org/frontpage",
+      "category": "全球热点",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": false
+    },
+    {
+      "name": "The Verge",
+      "url": "https://www.theverge.com/rss/index.xml",
+      "category": "全球热点",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": false
+    },
+    {
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com/feed/",
+      "category": "全球热点",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": false
+    },
+    {
+      "name": "爱范儿",
+      "url": "https://www.ifanr.com/feed",
+      "category": "科技生活",
+      "type": "rss",
+      "enabled": true,
+      "collapsed": false
+    },
+    {
+      "name": "微博热搜",
+      "url": "https://weibo.com/ajax/side/hotSearch",
+      "category": "社交热点",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://weibo.com"
+      },
+      "json_config": {
+        "items_path": "data.realtime",
+        "title_field": "word",
+        "link_template": "https://s.weibo.com/weibo?q=%23{word}%23",
+        "summary_field": "note"
+      },
+      "collapsed": false
+    },
+    {
+      "name": "B站热门",
+      "url": "https://api.bilibili.com/x/web-interface/popular",
+      "category": "社交热点",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.bilibili.com"
+      },
+      "json_config": {
+        "items_path": "data.list",
+        "title_field": "title",
+        "link_field": "short_link_v2",
+        "summary_field": "desc",
+        "time_field": "pubdate"
+      },
+      "collapsed": false
+    },
+    {
+      "name": "IT之家",
+      "url": "https://api.ithome.com/json/newslist/news",
+      "category": "科技生活",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      },
+      "json_config": {
+        "items_path": "newslist",
+        "title_field": "title",
+        "link_field": "url",
+        "summary_field": "description",
+        "time_field": "postdate"
+      },
+      "collapsed": false
+    },
+    {
+      "name": "示例脚本爬虫",
+      "category": "其他",
+      "type": "script",
+      "enabled": false,
+      "comment": "示例：自定义 Python 爬虫脚本",
+      "script_config": {
+        "type": "python",
+        "path": "scripts/example.py",
+        "function": "fetch_data"
+      },
+      "collapsed": false,
+      "url": ""
+    }
+  ],
+  "settings": {
+    "max_items_per_source": 5,
+    "hours_lookback": 24,
+    "summary_max_length": 200
+  }
+}

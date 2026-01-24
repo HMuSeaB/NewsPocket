@@ -1,0 +1,38 @@
+name: Daily News Digest
+
+on:
+  schedule:
+    # 北京时间每天早上 06:00 (UTC 22:00)
+    - cron: '0 22 * * *'
+
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Run NewsPocket
+      env:
+        EMAIL_HOST: ${{ secrets.EMAIL_HOST || 'smtp.qq.com' }}
+        EMAIL_PORT: ${{ secrets.EMAIL_PORT || '465' }}
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        EMAIL_TO: ${{ secrets.EMAIL_TO || secrets.EMAIL_USER }}
+      run: |
+        python main.py
