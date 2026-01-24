@@ -30,7 +30,7 @@
 | `EMAIL_USER` | ✅ | 发件人邮箱地址 | `example@qq.com` |
 | `EMAIL_PASS` | ✅ | SMTP 授权码 (非登录密码) | `abcdefghijklmn` |
 | `EMAIL_TO` | ❌ | 收件人邮箱 (默认发给自己) | `user1@test.com,user2@test.com` |
-| `EMAIL_HOST` | ❌ | SMTP 服务器 (默认 QQ 邮箱) | `smtp.qq.com` |
+| `EMAIL_HOST` | ✅ | SMTP 服务器 (如 QQ 邮箱) | `smtp.qq.com` |
 | `EMAIL_PORT` | ❌ | SMTP 端口 (默认 465 SSL) | `465` |
 
 ### 3. 自定义新闻源
@@ -44,7 +44,7 @@
 ### 4. 手动测试
 进入 `Actions` 页面，选择 `Daily News Digest`，点击 `Run workflow` 手动触发一次，检查是否收到邮件。
 
-## 🎛️ API 管理面板 (推荐)
+## 🎛️ 管理面板 (NewsPocket Admin)
 
 NewsPocket 内置了一个基于 **Streamlit** 的可视化管理面板，彻底解决了跨域问题，支持本地配置的实时保存与测试。
 
@@ -53,18 +53,26 @@ NewsPocket 内置了一个基于 **Streamlit** 的可视化管理面板，彻底
    pip install -r requirements.txt
    ```
 
-2. **启动面板**：
+2. **配置环境变量** (测试发送邮件必需)：
+   ```powershell
+   # Windows PowerShell
+   $env:EMAIL_HOST="smtp.example.com"
+   $env:EMAIL_USER="your@email.com"
+   $env:EMAIL_PASS="your_password"
+   ```
+
+3. **启动面板**：
    ```bash
    streamlit run admin_dashboard.py
    ```
    浏览器会自动打开 `http://localhost:8501`。
 
-3. **功能亮点**：
-   - **📊 模块化看板**：内置数据可视化图表，直观展示来源分布。
-   - **📝 所见即所得**：支持 Table（批量编辑）和 Card（折叠查看）两种视图，轻松管理配置。
-   - **🪄 智能模版**：内置 "RSS", "JSON API", "微博热搜" 等模版，一键添加新源，告别手写 JSON。
-   - **🧪 真机测试**：后端 Python 发起真实请求（无视 CORS），直接预览抓取到的清洗数据和原始 JSON。
-   - **📧 邮件预览**：一键生成包含图表和导航的 HTML 日报预览。
+4. **全新体验 (Cinematic Dusk UI)**：
+   - **🌘 暮光主题**: 沉浸式深色界面，融合毛玻璃特效与霓虹光感，夜间管理更护眼。
+   - **📊 数据洞察**: 新增 **仪表盘 (Dashboard)**，核心指标（活跃/暂停源）一目了然；升级为 **甜甜圈图 (Donut Charts)**，支持标签防遮挡显示。
+   - **📝 高效管理**: 支持表格视图批量编辑，或卡片视图快速折叠/删除配置。
+   - **⚡ 实时交互**: 完整的 CRUD 支持，所有配置变更即时生效。
+   - **📧 预览与测试**: 真实模拟后端抓取流程，一键生成精美 HTML 日报预览。
 
 ## 🛠️ 本地开发
 

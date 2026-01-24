@@ -482,23 +482,33 @@ def render_source_manager(config, filters, all_categories):
             hide_index=True
         )
 
+        # 实时更新配置 (Handle Add/Update/Delete)
         if not edited_df.equals(df[cols_to_show]):
+            new_list = []
+
+            # Reconstruct list from edited dataframe
             for _, row in edited_df.iterrows():
+                # 1. Existing Source (Keep hidden fields)
                 if pd.notna(row.get("_source_index")):
                     idx = int(row["_source_index"])
                     if 0 <= idx < len(sources_data):
-                        # 更新核心字段
+                        # Get original object
+                        source_obj = sources_data[idx]
+                        # Update visible fields
                         for field in ["enabled", "collapsed", "name", "category", "type", "url"]:
-                            config["sources"][idx][field] = row[field]
+                            if field in row:
+                                source_obj[field] = row[field]
+                        new_list.append(source_obj)
+                # 2. New Source
+                else:
+                    new_source = {k: row[k] for k in ["enabled", "collapsed", "name", "category", "type", "url"] if k in row}
+                    # Init defaults
+                    new_source.setdefault("headers", {})
+                    new_source.setdefault("json_config", {})
+                    new_list.append(new_source)
 
-            # 处理新增行 (没有 _source_index 的)
-            new_rows = edited_df[edited_df["_source_index"].isna()]
-            for _, row in new_rows.iterrows():
-                new_source = {k: row[k] for k in ["enabled", "collapsed", "name", "category", "type", "url"]}
-                # 补全默认值
-                new_source["headers"] = {}
-                new_source["json_config"] = {}
-                config["sources"].append(new_source)
+            # Apply changes to memory
+            config["sources"] = new_list
 
     else:
         # Card View
@@ -515,10 +525,21 @@ def render_source_manager(config, filters, all_categories):
                     fold = "📂" if row.get('collapsed', False) else "📖"
                     with st.expander(f"{status} {row['name']} {fold}"):
                         st.markdown(f"**{t('card_url')}** `{row['url']}`")
-                        st.caption(f"{t('card_type')} {row['type']} | {t('card_fold')} {row.get('collapsed', False)}")
-                        if st.button("Edit Config", key=f"btn_edit_{row['_source_index']}"):
-                            st.session_state["selected_source_index"] = int(row["_source_index"])
-                            st.info(t('switch_tip'))
+                        st.caption(f"{t('card_type')} {row['type']}")
+
+                        # Actions
+                        c_edit, c_del = st.columns([3, 1])
+                        with c_edit:
+                            if st.button("⚙️ Config", key=f"btn_edit_{row['_source_index']}", use_container_width=True):
+                                st.session_state["selected_source_index"] = int(row["_source_index"])
+                                st.info(t('switch_tip'))
+                        with c_del:
+                            if st.button("🗑️", key=f"btn_del_{row['_source_index']}", type="primary", use_container_width=True):
+                                # Delete logic
+                                idx_to_del = int(row["_source_index"])
+                                if 0 <= idx_to_del < len(config["sources"]):
+                                    config["sources"].pop(idx_to_del)
+                                    st.rerun()
 
 
 def render_test_playground(config):
