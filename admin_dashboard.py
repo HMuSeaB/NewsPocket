@@ -224,41 +224,92 @@ def setup_page():
         initial_sidebar_state="expanded"
     )
 
-    # 注入自定义 CSS (Dark Card Style)
+    # 注入自定义 CSS (Cinematic Dusk Style)
     st.markdown("""
     <style>
-        /* 全局背景与字体 */
+        /* 全局背景：深冷蓝暮光渐变 */
         .stApp {
-            background-color: #1e1e1e;
+            background: linear-gradient(135deg, #0d1117 0%, #1a2a4a 100%);
             color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
         }
-        /* 侧边栏样式 */
+
+        /* 侧边栏：半透明磨砂玻璃 */
         section[data-testid="stSidebar"] {
-            background-color: #252526;
-            border-right: 1px solid #333;
+            background-color: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
-        /* 标题样式 */
+
+        /* 标题：微光效果 */
         h1, h2, h3 {
             color: #ffffff !important;
-            font-family: 'Segoe UI', sans-serif;
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
-        /* DataFrame 表格容器样式 */
-        [data-testid="stDataFrame"] {
-            background-color: #2d2d30;
-            border: 1px solid #444;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+        /* 卡片容器：毛玻璃与边框光效 */
+        div[data-testid="stMetric"], div[data-testid="stExpander"], [data-testid="stDataFrame"] {
+            background: rgba(30, 34, 45, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        /* 卡片化视觉效果微调 */
-        div.block-container {
-            padding-top: 2rem;
+
+        div[data-testid="stMetric"]:hover, div[data-testid="stExpander"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 242, 255, 0.15);
+            border-color: rgba(0, 242, 255, 0.3) !important;
         }
-        /* 输入框与SelectBox背景 */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
-            background-color: #2d2d30 !important;
+
+        /* Metric 值：霓虹橙/青 */
+        div[data-testid="stMetricValue"] {
+            color: #00f2ff;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
+        }
+        div[data-testid="stMetricLabel"] {
+            color: #a0a0b0;
+        }
+
+        /* 按钮：暮光渐变 (橙->粉) */
+        button[kind="primary"] {
+            background: linear-gradient(90deg, #ff6b4a 0%, #f4a0a0 100%) !important;
+            border: none !important;
+            color: #1a1a2e !important;
+            font-weight: 700 !important;
+            box-shadow: 0 0 15px rgba(255, 107, 74, 0.4);
+            transition: all 0.3s ease;
+        }
+        button[kind="primary"]:hover {
+            box-shadow: 0 0 25px rgba(255, 107, 74, 0.6);
+            transform: scale(1.02);
+        }
+
+        /* 输入框：深色半透明 */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"] > div, .stTextArea textarea {
+            background-color: rgba(0, 0, 0, 0.3) !important;
             color: #ffffff !important;
-            border-color: #444 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #58a6ff;
         }
     </style>
     """, unsafe_allow_html=True)

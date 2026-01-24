@@ -32,25 +32,28 @@
 
         /* ═══════ CONTAINER ═══════ */
         .container {
+            width: 100%;
             max-width: 640px;
             margin: 0 auto;
             background-color: #ffffff;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.05);
         }
 
         /* ═══════ HERO HEADER ═══════ */
         .hero {
-            padding: 48px 32px 40px;
+            padding: 48px 24px 32px;
             text-align: center;
             background-color: #fafafa;
             border-bottom: 1px solid #e5e5e7;
         }
 
         .hero-glow-line {
-            height: 3px;
-            margin: 0 auto 20px;
+            height: 4px;
+            margin: 0 auto 24px;
             max-width: 120px;
-            background: linear-gradient(90deg, #7c3aed 0%, #a855f7 50%, #fb923c 100%);
+            background: linear-gradient(90deg, #00f2ff 0%, #3b82f6 50%, #7c3aed 100%);
             border-radius: 2px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
         }
 
         .brand {
@@ -59,7 +62,7 @@
             font-weight: 600;
             letter-spacing: 3px;
             text-transform: uppercase;
-            color: #7c3aed;
+            color: #0ea5e9;
             margin-bottom: 12px;
         }
 
@@ -78,7 +81,7 @@
         }
 
         .hero .date a {
-            color: #7c3aed;
+            color: #0ea5e9;
             text-decoration: none;
         }
 
@@ -103,7 +106,7 @@
         .stat-value {
             font-size: 24px;
             font-weight: 700;
-            color: #7c3aed;
+            color: #0ea5e9;
         }
 
         .stat-label {
@@ -446,41 +449,47 @@
 
         /* ═══════ RESPONSIVE ═══════ */
         @media only screen and (max-width: 600px) {
-            .hero { padding: 36px 20px 32px; }
-            .hero h1 { font-size: 22px; }
-            .section { padding: 20px 16px; }
-            .card { padding: 16px; }
-            .stat-value { font-size: 20px; }
+            .container { width: 100% !important; max-width: 100% !important; box-shadow: none; }
+            .hero { padding: 32px 16px 24px; }
+            .hero h1 { font-size: 24px; }
+            .section { padding: 20px 12px; }
+            .card { padding: 16px; margin-bottom: 12px; }
+            .stat-value { font-size: 18px; }
+            .stat-label { font-size: 10px; }
+            .section-title { font-size: 15px; }
         }
 
         /* ══════════════════════════════════════════════════════════
-           DARK MODE ADAPTATION
+           DARK MODE ADAPTATION (CINEMA UI)
            ══════════════════════════════════════════════════════════ */
         @media (prefers-color-scheme: dark) {
             body {
-                background-color: #0d0d14 !important;
+                background-color: #050508 !important; /* Deep black-blue */
                 color: #e8e8ec !important;
             }
 
             .container {
-                background-color: #12121c !important;
+                background-color: #0d0d12 !important;
+                box-shadow: 0 0 60px rgba(0, 0, 0, 0.5) !important;
             }
 
             .hero {
-                background-color: #1a1a24 !important;
-                border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             .brand {
                 color: #a855f7 !important;
+                text-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
             }
 
             .hero h1 {
-                color: #fafafa !important;
+                color: #ffffff !important;
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
             }
 
             .hero .date {
-                color: rgba(255, 255, 255, 0.5) !important;
+                color: rgba(255, 255, 255, 0.6) !important;
             }
 
             .hero .date a {
@@ -488,81 +497,92 @@
             }
 
             .stats {
-                background-color: #1a1a24 !important;
-                border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             .stat-item {
-                border-right-color: rgba(255, 255, 255, 0.06) !important;
+                border-right-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             .stat-value {
                 color: #c084fc !important;
+                text-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
             }
 
             .stat-label {
-                color: rgba(255, 255, 255, 0.4) !important;
+                color: rgba(255, 255, 255, 0.5) !important;
             }
 
             .section {
-                border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             .section-icon {
-                background-color: rgba(168, 85, 247, 0.15) !important;
+                background-color: rgba(168, 85, 247, 0.2) !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
             }
 
             .section-icon-orange {
-                background-color: rgba(251, 146, 60, 0.15) !important;
+                background-color: rgba(251, 146, 60, 0.2) !important;
+                box-shadow: 0 0 10px rgba(251, 146, 60, 0.2);
             }
 
             .section-title {
-                color: #fafafa !important;
+                color: #ffffff !important;
             }
 
+            /* Cinema Card Style */
             .card {
-                background-color: rgba(255, 255, 255, 0.03) !important;
-                border-color: rgba(255, 255, 255, 0.06) !important;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+                background-color: #1a1a24 !important;
+                border: 1px solid rgba(124, 58, 237, 0.15) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
             }
 
             .card:hover {
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+                background-color: #20202b !important;
+                border-color: rgba(124, 58, 237, 0.4) !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 15px rgba(124, 58, 237, 0.15) !important;
+                transform: translateY(-2px);
             }
 
             .card-title a {
-                color: #fafafa !important;
+                color: #ffffff !important;
             }
 
             .card-title a:hover {
                 color: #c084fc !important;
                 border-bottom-color: #c084fc !important;
+                text-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
             }
 
             .card-meta {
-                color: rgba(255, 255, 255, 0.45) !important;
+                color: rgba(255, 255, 255, 0.5) !important;
             }
 
             .card-source {
                 background-color: rgba(168, 85, 247, 0.15) !important;
-                color: #c084fc !important;
+                color: #d8b4fe !important;
+                border: 1px solid rgba(168, 85, 247, 0.2) !important;
             }
 
             .card-summary {
-                color: rgba(255, 255, 255, 0.55) !important;
+                color: rgba(255, 255, 255, 0.7) !important;
             }
 
             .card-link {
                 background-color: rgba(168, 85, 247, 0.15) !important;
-                color: #c084fc !important;
+                color: #d8b4fe !important;
+                border: 1px solid rgba(168, 85, 247, 0.2) !important;
             }
 
             .card-link:hover {
-                background-color: rgba(168, 85, 247, 0.25) !important;
+                background-color: rgba(168, 85, 247, 0.3) !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
             }
 
             .footer {
-                background-color: rgba(0, 0, 0, 0.3) !important;
+                background-color: #050508 !important;
             }
 
             .footer-brand {
@@ -583,51 +603,54 @@
 
             /* New Dark Mode Styles */
             .toc-nav {
-                background-color: #1a1a24 !important;
-                border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             .toc-link {
-                background-color: rgba(255, 255, 255, 0.03) !important;
-                border-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #1a1a24 !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
                 color: #e8e8ec !important;
             }
 
             .toc-link:hover {
-                background-color: rgba(168, 85, 247, 0.15) !important;
+                background-color: rgba(168, 85, 247, 0.2) !important;
                 border-color: #c084fc !important;
                 color: #c084fc !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
             }
 
             .chart-wrapper {
-                background-color: #12121c !important;
-                border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #0d0d12 !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
             }
         }
 
                     /* Dark Mode for Source Groups */
             details.source-group {
-                background-color: rgba(255, 255, 255, 0.03) !important;
-                border-color: rgba(255, 255, 255, 0.06) !important;
+                background-color: #1a1a24 !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+                box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
             }
 
             summary.source-summary {
-                background-color: rgba(255, 255, 255, 0.05) !important;
-                color: #fafafa !important;
+                background-color: #20202b !important;
+                color: #ffffff !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             }
 
             summary.source-summary:hover {
-                background-color: rgba(255, 255, 255, 0.08) !important;
+                background-color: #252532 !important;
             }
 
             .source-badge {
-                background-color: rgba(168, 85, 247, 0.15) !important;
-                color: #c084fc !important;
+                background-color: rgba(168, 85, 247, 0.2) !important;
+                color: #d8b4fe !important;
             }
 
             .source-content {
                 background-color: transparent !important;
-                border-top-color: rgba(255, 255, 255, 0.06) !important;
+                border-top-color: rgba(255, 255, 255, 0.08) !important;
             }
 
             /* ══════════════════════════════════════════════════════════
