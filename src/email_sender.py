@@ -30,7 +30,7 @@ class EmailSender:
         self.env = Environment(loader=FileSystemLoader(template_dir))
         self.user = os.environ.get('EMAIL_USER')
         self.password = os.environ.get('EMAIL_PASS')
-        self.host = os.environ.get('EMAIL_HOST', 'smtp.qq.com')
+        self.host = os.environ.get('EMAIL_HOST')
         self.port = int(os.environ.get('EMAIL_PORT', 465))
 
         # 接收者可以是单个字符串或以逗号分隔的字符串
@@ -66,6 +66,10 @@ class EmailSender:
             subject: 邮件主题
             html_content: HTML 内容
         """
+        if not self.host:
+            logger.error("未配置 EMAIL_HOST 环境变量")
+            return
+
         if not self.user or not self.password:
             logger.error("未配置 EMAIL_USER 或 EMAIL_PASS 环境变量")
             return

@@ -41,7 +41,6 @@ def main():
 
     # 1. 加载配置
     base_dir = Path(__file__).parent
-    base_dir = Path(__file__).parent
     config_path = base_dir / 'config' / 'sources.json'
 
     config = load_config(str(config_path))

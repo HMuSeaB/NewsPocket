@@ -342,31 +342,84 @@ def render_sidebar(config):
 
 
 def render_analytics(sources):
-    """渲染分析图表"""
+    """渲染分析图表 (Cinematic Style)"""
     if not px or not sources:
         return
 
+    # 1. 关键指标 (Metrics)
+    total = len(sources)
+    enabled = len([s for s in sources if s.get('enabled')])
+    disabled = total - enabled
+
+    st.markdown("### 📈 核心指标")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("总订阅源", total, delta="Sources")
+    m2.metric("活跃中", enabled, delta="Running", delta_color="normal") # normal=green
+    m3.metric("已暂停", disabled, delta="Paused", delta_color="off")   # off=gray
+
+    st.markdown("---")
+
+    # 2. 视觉图表 (Charts)
     st.subheader(t('analytics'))
     viz_df = pd.DataFrame(sources)
 
+    # 暮光配色方案 (Twilight/Neon Palette)
+    # 对应: 青, 橙, 紫, 粉, 蓝, 绿
+    colors = ['#00f2ff', '#ff6b4a', '#a371f7', '#f4a0a0', '#58a6ff', '#3fb950']
+
     col1, col2 = st.columns(2)
+
+    common_layout = dict(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, sans-serif", color="#e0e0e0", size=14),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5), # 下移图例
+        margin=dict(t=30, b=60, l=40, r=40) # 增加左右下边距，防止标签截断
+    )
 
     with col1:
         if "category" in viz_df.columns:
             cat_counts = viz_df["category"].value_counts().reset_index()
             cat_counts.columns = ["Category", "Count"]
-            fig = px.pie(cat_counts, values="Count", names="Category", title=t('chart_cat'),
-                         template="plotly_dark", hole=0.4)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+
+            fig = px.pie(
+                cat_counts,
+                values="Count",
+                names="Category",
+                title=t('chart_cat'),
+                hole=0.6, # 更大的中空区域 (Donut)
+                color_discrete_sequence=colors
+            )
+            fig.update_traces(
+                textinfo='percent',
+                textposition='outside',
+                marker=dict(line=dict(color='#1a2a4a', width=3)), # 深蓝描边
+                pull=[0.05] * len(cat_counts) # 轻微炸开效果
+            )
+            fig.update_layout(**common_layout)
             st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         if "type" in viz_df.columns:
             type_counts = viz_df["type"].value_counts().reset_index()
             type_counts.columns = ["Type", "Count"]
-            fig = px.pie(type_counts, values="Count", names="Type", title=t('chart_type'),
-                         template="plotly_dark", hole=0.4)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+
+            fig = px.pie(
+                type_counts,
+                values="Count",
+                names="Type",
+                title=t('chart_type'),
+                hole=0.6,
+                color_discrete_sequence=colors[::-1] # 反转配色以区分
+            )
+            fig.update_traces(
+                textinfo='percent',
+                textposition='outside',
+                marker=dict(line=dict(color='#1a2a4a', width=3)),
+                pull=[0.05] * len(type_counts)
+            )
+            fig.update_layout(**common_layout)
             st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
