@@ -3,7 +3,7 @@ name: Daily News Digest
 on:
   schedule:
     # 北京时间每天早上 06:00 (UTC 22:00)
-    - cron: '14 4 * * *'
+    - cron: '16 4 * * *'
 
   # 允许手动触发
   workflow_dispatch:
