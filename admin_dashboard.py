@@ -383,6 +383,66 @@ def render_sidebar(config):
 
         st.divider()
 
+        # 导入/导出 JSON
+        with st.expander("📤 导入/导出配置"):
+            st.caption("支持导入阅读源 JSON 格式")
+            import_json = st.text_area("粘贴 JSON 配置", height=100)
+            if st.button("📥 导入源"):
+                try:
+                    data = json.loads(import_json)
+                    # 尝试标准化导入数据
+                    if isinstance(data, dict):
+                        # 处理单条导入 (类似阅读源格式)
+                        if "ruleTitle" in data or "sourceUrl" in data:
+                            new_item = {
+                                "name": data.get("sourceName", "Imported Source"),
+                                "url": data.get("sourceUrl", "").replace("{{(page-1)*30}}", ""), # 简单清理模版变量
+                                "category": data.get("sourceGroup", "Imported"),
+                                "type": "json_api", # 默认为 json_api
+                                "enabled": True,
+                                "collapsed": False,
+                                "headers": {
+                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                                },
+                                "json_config": {}
+                            }
+                            # 尝试映射规则
+                            if "ruleArticles" in data: new_item["json_config"]["items_path"] = data["ruleArticles"].replace("$.", "")
+                            if "ruleTitle" in data: new_item["json_config"]["title_field"] = data["ruleTitle"].replace("$.", "")
+                            if "ruleLink" in data: new_item["json_config"]["link_field"] = data["ruleLink"].replace("$.", "")
+                            if "ruleDescription" in data: new_item["json_config"]["summary_field"] = data["ruleDescription"].replace("$.", "")
+
+                            config["sources"].append(new_item)
+                            save_config(config)
+                            st.success(f"成功导入: {new_item['name']}")
+                            st.rerun()
+                        # 处理标准 NewsPocket 格式
+                        elif "url" in data and "name" in data:
+                             config["sources"].append(data)
+                             save_config(config)
+                             st.success(f"成功导入: {data['name']}")
+                             st.rerun()
+                    elif isinstance(data, list):
+                        # 批量导入
+                        count = 0
+                        for item in data:
+                            if "url" in item and "name" in item:
+                                config["sources"].append(item)
+                                count += 1
+                        save_config(config)
+                        st.success(f"成功导入 {count} 个源")
+                        st.rerun()
+                except json.JSONDecodeError:
+                    st.error("JSON 格式错误")
+                except Exception as e:
+                    st.error(f"导入失败: {str(e)}")
+
+            if st.button("📤 导出所有源"):
+                st.code(json.dumps(config["sources"], ensure_ascii=False, indent=2), language="json")
+
+
+        st.divider()
+
         # 全局保存
         if st.button(t('save_btn'), type="primary", use_container_width=True):
             save_config(config)

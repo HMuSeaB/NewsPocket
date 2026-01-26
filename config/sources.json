@@ -46,7 +46,7 @@
       "category": "科技生活",
       "type": "rss",
       "enabled": true,
-      "collapsed": false
+      "collapsed": true
     },
     {
       "name": "微博热搜",
@@ -64,7 +64,7 @@
         "link_template": "https://s.weibo.com/weibo?q=%23{word}%23",
         "summary_field": "note"
       },
-      "collapsed": false
+      "collapsed": true
     },
     {
       "name": "B站热门",
@@ -83,7 +83,7 @@
         "summary_field": "desc",
         "time_field": "pubdate"
       },
-      "collapsed": false
+      "collapsed": true
     },
     {
       "name": "IT之家",
@@ -100,6 +100,25 @@
         "link_field": "url",
         "summary_field": "description",
         "time_field": "postdate"
+      },
+      "collapsed": true
+    },
+    {
+      "name": "知乎每日早报",
+      "url": "https://www.zhihu.com/api/v4/columns/c_1085975047386050560/items?limit=30",
+      "category": "行业动态",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.zhihu.com"
+      },
+      "json_config": {
+        "items_path": "data",
+        "title_field": "title",
+        "link_field": "url",
+        "summary_field": "content",
+        "time_field": "updated"
       },
       "collapsed": false
     },
