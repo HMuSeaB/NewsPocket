@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsPocket 管理面板</title>
+    <link rel="stylesheet" href="/src/style.css">
+    <!-- 引入 Font   Awesome 或自定义图标如果需要，目前为了极致轻量暂不引入 -->
+</head>
+
+<body class="dark-theme">
+    <div id="app">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🗞️ NewsPocket</h2>
+                <p>配置管理</p>
+            </div>
+            <div class="sidebar-actions">
+                <button id="btn-add-rss" class="btn btn-primary">+ 新增 RSS</button>
+                <button id="btn-add-json" class="btn btn-primary">+ 新增 JSON API</button>
+            </div>
+
+            <div class="source-list-container">
+                <ul id="source-list" class="source-list">
+                    <!-- JS 动态渲染源列表 -->
+                </ul>
+            </div>
+        </aside>
+
+        <!-- 主编辑区 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="status-indicator">
+                    <span id="save-status">✔️ 已加载</span>
+                </div>
+                <div class="global-actions">
+                    <button id="btn-open-config" class="btn btn-outline"
+                        style="color:var(--accent-blue); border-color:var(--accent-blue)">📁 打开本地配置</button>
+                    <button id="btn-fetch-test" class="btn btn-secondary" style="display: none;">▶️ 测试抓取</button>
+                    <button id="btn-save" class="btn btn-success">💾 保存配置</button>
+                </div>
+            </header>
+
+            <div id="editor-container" class="editor-container">
+                <div class="editor-inner">
+                    <!-- 提示没有选中时的空状态 -->
+                    <div id="empty-state" class="empty-state">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🗞️</div>
+                        <h3>准备就绪</h3>
+                        <p style="color: var(--fg-muted); margin-top: 10px;">请在左侧侧边栏选择一个新闻源进行编辑，或创建一个新源。</p>
+                    </div>
+
+                    <!-- 实际表单域 (JS控制显示) -->
+                    <form id="source-form" class="source-form" style="display: none;">
+                        <div class="header-row">
+                            <h3>新闻源详细设置</h3><button type="button" class="btn btn-outline" id="btn-delete-source-new">🗑
+                                删除此源</button>
+                        </div>
+                        <div class="form-group row">
+                            <div class="input-field">
+                                <label for="name">源名称 *</label>
+                                <input type="text" id="name" required placeholder="例如：微博热搜">
+                            </div>
+                            <div class="input-field">
+                                <label for="category">分类</label>
+                                <input type="text" id="category" placeholder="同分类将自动聚合显示">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="url">URL *</label>
+                            <input type="url" id="url" required placeholder="https://...">
+                        </div>
+
+                        <div class="form-group inline-checkbox">
+                            <input type="checkbox" id="enabled">
+                            <label for="enabled">启用此新闻源</label>
+                        </div>
+
+                        <input type="hidden" id="type">
+                        <input type="hidden" id="index-tracker">
+
+                        <!-- JSON API 高级配置部分 -->
+                        <div id="json-config-section" class="advanced-section" style="display: none;">
+                            <h3>JSON API 解析配置</h3>
+                            <div class="form-group">
+                                <label for="items_path">Items Path (列表路径)</label>
+                                <input type="text" id="items_path" placeholder="例如：data.list，支持嵌套。">
+                            </div>
+                            <div class="form-group row">
+                                <div class="input-field half">
+                                    <label for="title_field">Title 字段</label>
+                                    <input type="text" id="title_field" placeholder="例如：title">
+                                </div>
+                                <div class="input-field half">
+                                    <label for="time_field">Time 字段</label>
+                                    <input type="text" id="time_field" placeholder="（可选）例如：publish_time_str">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="input-field half">
+                                    <label for="link_field">Link 字段</label>
+                                    <input type="text" id="link_field" placeholder="例如：url">
+                                </div>
+                                <div class="input-field half">
+                                    <label for="link_template">Link 组合模板</label>
+                                    <input type="text" id="link_template" placeholder="例如：https://app.com/{id}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 自定义 Headers (可选) -->
+                        <div class="advanced-section">
+                            <h3>自定义请求头 (Headers)</h3>
+                            <div id="headers-container">
+                                <!-- 动态增加 header 行 -->
+                            </div>
+                            <button type="button" id="btn-add-header" class="btn btn-outline text-sm">+ 添加
+                                Header</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 测试结果弹窗 -->
+                <div id="test-result-modal" class="modal" style="display:none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-title">测试抓取结果</h3>
+                            <button class="close-btn"
+                                onclick="document.getElementById('test-result-modal').style.display='none'">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <pre id="test-result-text">加载中...</pre>
+                        </div>
+                    </div>
+                </div>
+        </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
