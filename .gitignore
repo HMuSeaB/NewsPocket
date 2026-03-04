@@ -44,3 +44,13 @@ config/local_sources.json
 # Tooling
 .agent/
 .claude/
+CLAUDE.md
+*.code-workspace
+*.opml
+
+# Go
+newspocket.exe
+newspocket
+newspocket-*
+output_log.txt
+stderr.log

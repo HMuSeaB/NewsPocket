@@ -1,95 +1,78 @@
 # 📰 NewsPocket
 
-一个轻量级、自动化、零成本的新闻聚合助手。每天早上自动抓取全球优质新闻源（RSS/JSON API/自定义脚本），整理成精美的 HTML 简报发送到你的邮箱。
+一个轻量级、自动化、零依赖的新闻聚合助手。每天早上自动抓取全球优质新闻源（RSS/JSON API），整理成精美的 HTML 简报发送到你的邮箱。
 
-![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+**本项目已从 Python 重写为 Go (v2.0)，带来极速的启动体验、原生的并发抓取和零依赖的单文件部署。**
+
+![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automated-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-purple.svg)
 
 ## ✨ 特性
 
 - **零成本**: 完全基于 GitHub Actions 运行，无需购买服务器。
+- **极速性能**: 采用 Go 原生 Goroutine 并发抓取，编译为单一二进制文件，免去一切依赖安装烦恼。
 - **多源支持**:
   - 📡 **标准 RSS**: 支持所有标准 RSS/Atom 源。
-  - 🔌 **JSON API**: 支持微博热搜、B站热门等 JSON 接口，可自定义字段映射。
-  - 🐍 **自定义脚本**: 支持 Python/Node.js 脚本，处理复杂抓取逻辑。
-- **可视化管理**: 基于 Streamlit 的强大管理面板，支持所见即所得的配置修改和真实环境测试。
-- **智能聚合**: 自动清洗 HTML 标签，统一格式，按板块分类。
-- **精美排版**: "Morning Brew" 风格的响应式邮件模板，手机阅读体验极佳，浏览器预览支持可视化图表。
+  - 🔌 **JSON API**: 支持微博热搜、B站热门等 JSON 接口，可自定义路径和时间字段解析。
+- **智能过滤**: 自动清洗 HTML 噪音，智能在句子边界截断摘要，只推送最近 24 小时的内容。
+- **精美排版**: "Morning Brew" 风格的响应式邮件模板，自动适配系统的亮色/暗色模式，支持可视化数据统计。
 
-## 🚀 快速开始
+## 🚀 快速开始 (GitHub Actions 自动化)
 
-### 1. Fork 本仓库
-点击右上角的 **Fork** 按钮，将项目复制到你自己的 GitHub 账号。
+本项目的核心理念是通过 Fork + GitHub Actions 来实现无人值守的自动化邮件推送。
 
-### 2. 配置 GitHub Secrets
-进入你的 Fork 仓库，点击 `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`，添加以下变量：
+1. **Fork 本仓库** 到你的 GitHub 账号下。
+2. 转到你 Fork 后的仓库的 **Settings -> Secrets and variables -> Actions**, 点击 **New repository secret**，添加以下环境变量：
+   - `EMAIL_HOST`: SMTP 服务器地址 (默认: `smtp.qq.com`)
+   - `EMAIL_PORT`: SMTP 服务器端口 (默认: `465`)
+   - `EMAIL_USER`: 你的发件邮箱账号 (例: `abc@qq.com`)
+   - `EMAIL_PASS`: 你的发件邮箱授权码 (不是登录密码！)
+   - `EMAIL_TO`: 收件人邮箱，支持英文逗号分隔的多个邮箱 (如果不填则默认发送给 `EMAIL_USER`)
+3. 修改仓库按需配置 [config/sources.json](./config/sources.json)。
+4. 切换到仓库的 **Actions** 面板，允许运行 workflows。点击左侧的 "Daily News Digest"，然后点击 **Run workflow** 手动触发第一次执行。
+5. 之后每天北京时间早上 08:15（UTC 00:15）会自动将早报发送到你的邮箱！
 
-| 变量名 | 必填 | 说明 | 示例 |
-|--------|------|------|------|
-| `EMAIL_USER` | ✅ | 发件人邮箱地址 | `example@qq.com` |
-| `EMAIL_PASS` | ✅ | SMTP 授权码 (非登录密码) | `abcdefghijklmn` |
-| `EMAIL_TO` | ❌ | 收件人邮箱 (默认发给自己) | `user1@test.com,user2@test.com` |
-| `EMAIL_HOST` | ✅ | SMTP 服务器 (如 QQ 邮箱) | `smtp.qq.com` |
-| `EMAIL_PORT` | ❌ | SMTP 端口 (默认 465 SSL) | `465` |
+## 💻 本地运行与开发
 
-### 3. 自定义新闻源
-你可以直接编辑 `config/sources.json`，或者使用下方的**管理面板**进行可视化配置。
+下载或克隆本仓库后，你可以按照以下步骤在本地运行和开发：
 
-#### 支持的源类型：
-1. **RSS 源**: 标准的 RSS/Atom 订阅链接。
-2. **JSON API**: 如微博热搜，需配置 `json_config` 映射字段。
-3. **Script**: 自定义 Python 脚本 (位于 `scripts/` 目录)。
+### 前置要求
 
-### 4. 手动测试
-进入 `Actions` 页面，选择 `Daily News Digest`，点击 `Run workflow` 手动触发一次，检查是否收到邮件。
+- 安装 [Go 1.22+](https://go.dev/)
 
-## 🎛️ 管理面板 (NewsPocket Admin)
+### 编译与运行
 
-NewsPocket 内置了一个基于 **Streamlit** 的可视化管理面板，彻底解决了跨域问题，支持本地配置的实时保存与测试。
+提供 `--test` 模式，该模式下抓取并渲染模板后会生成 `output.html` 而不会实际发送邮件：
 
-1. **安装依赖**：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **配置环境变量** (测试发送邮件必需)：
-   ```powershell
-   # Windows PowerShell
-   $env:EMAIL_HOST="smtp.example.com"
-   $env:EMAIL_USER="your@email.com"
-   $env:EMAIL_PASS="your_password"
-   ```
-
-3. **启动面板**：
-   ```bash
-   streamlit run admin_dashboard.py
-   ```
-   浏览器会自动打开 `http://localhost:8501`。
-
-4. **全新体验 (Cinematic Dusk UI)**：
-   - **🌘 暮光主题**: 沉浸式深色界面，融合毛玻璃特效与霓虹光感，夜间管理更护眼。
-   - **📊 数据洞察**: 新增 **仪表盘 (Dashboard)**，核心指标（活跃/暂停源）一目了然；升级为 **甜甜圈图 (Donut Charts)**，支持标签防遮挡显示。
-   - **📝 高效管理**: 支持表格视图批量编辑，或卡片视图快速折叠/删除配置。
-   - **⚡ 实时交互**: 完整的 CRUD 支持，所有配置变更即时生效。
-   - **📧 预览与测试**: 真实模拟后端抓取流程，一键生成精美 HTML 日报预览。
-
-## 🛠️ 本地开发
-
-1. 克隆仓库并安装依赖
 ```bash
-git clone https://github.com/HMuSeaB/NewsPocket.git
-cd NewsPocket
-pip install -r requirements.txt
+# 下载依赖并编译
+go mod tidy
+go build -o newspocket ./cmd/newspocket
+
+# 测试运行（生成 output.html 到当前目录）
+./newspocket --test --config config/sources.json
+
+# 生产运行（需配置环境变量）
+export EMAIL_USER="..."
+export EMAIL_PASS="..."
+./newspocket --config config/sources.json
 ```
 
-2. 运行测试 (生成 HTML 文件但不发送邮件)
-```bash
-python main.py --test
-```
+## 📂 核心配置说明
 
-3. 发送真实邮件
-设置环境变量 (`EMAIL_USER`, `EMAIL_PASS`) 后直接运行 `python main.py`。
+核心配置位于 `config/sources.json`。支持以下高级选项：
+
+- **基础配置**: 支持源的重命名 (`name`)、URL (`url`) 和所属分类 (`category`)。
+- **请求头**: 可以通过 `headers` 覆盖默认的 User-Agent 甚至提供 Cookie。
+- **类型**: 支持 `rss` 和 `json_api`。
+- **JSON API 解析**: 对于 `json_api`，可以通过 `json_config` 配置 `items_path` 提取文章列表，`title_field`, `link_field` 甚至 `link_template` 自定义组装链接格式。
+
+## 🤝 贡献指南
+
+1. 欢迎提交 Issue 或 Pull Request 加入新的信息源或功能。
+2. 请确保提交前运行 `go fmt ./...` 并保证 `go build` 正常。
 
 ## 📄 License
-MIT License
+
+[MIT License](LICENSE)
