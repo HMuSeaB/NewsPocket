@@ -49,8 +49,8 @@ CLAUDE.md
 *.opml
 
 # Go
-newspocket.exe
-newspocket
-newspocket-*
+/newspocket.exe
+/newspocket
+/newspocket-*
 output_log.txt
 stderr.log
