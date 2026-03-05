@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <title>{{ .Title }}</title>
+    <!--
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  NewsPocket · Adaptive Theme Designer                        ║
+    ║  Light-first with automatic dark mode adaptation             ║
+    ╚══════════════════════════════════════════════════════════════╝
+    -->
+    <style>
+        /* ══════════════════════════════════════════════════════════
+           ADAPTIVE DESIGN SYSTEM - Light First
+           ══════════════════════════════════════════════════════════ */
+
+        /* Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ═══════ BASE STYLES (Light Theme) ═══════ */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', 'PingFang SC', sans-serif;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ═══════ CONTAINER ═══════ */
+        .container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ═══════ HERO HEADER ═══════ */
+        .hero {
+            padding: 48px 24px 32px;
+            text-align: center;
+            background-color: #fafafa;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .hero-glow-line {
+            height: 4px;
+            margin: 0 auto 24px;
+            max-width: 120px;
+            background: linear-gradient(90deg, #00f2ff 0%, #3b82f6 50%, #7c3aed 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .brand {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #0ea5e9;
+            margin-bottom: 12px;
+        }
+
+        .hero h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+
+        .hero .date {
+            font-size: 14px;
+            color: #6e6e73;
+            font-weight: 400;
+        }
+
+        .hero .date a {
+            color: #0ea5e9;
+            text-decoration: none;
+        }
+
+        /* ═══════ STATS BAR ═══════ */
+        .stats {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fafafa;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px 12px;
+            border-right: 1px solid #e5e5e7;
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0ea5e9;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #6e6e73;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* ═══════ SECTION ═══════ */
+        .section {
+            padding: 28px 24px;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .section-header {
+            margin-bottom: 20px;
+        }
+
+        .section-header table {
+            border-collapse: collapse;
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            text-align: center;
+            vertical-align: middle;
+            background-color: #f3e8ff;
+            max-width: 36px;
+            min-width: 36px;
+        }
+
+        .section-icon svg {
+            vertical-align: middle;
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+        }
+
+        .section-icon-orange {
+            background-color: #ffedd5;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: 0.3px;
+            padding-left: 12px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* ═══════ SOURCE GROUP (Details/Summary) ═══════ */
+        details.source-group {
+            margin-bottom: 16px;
+            background-color: #ffffff;
+            border: 1px solid #e5e5e7;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        summary.source-summary {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1d1d1f;
+            background-color: #fafafa;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+            user-select: none;
+            outline: none;
+        }
+
+        summary.source-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary.source-summary:hover {
+            background-color: #f5f5f7;
+        }
+
+        /* Custom Arrow */
+        summary.source-summary::after {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-right: 2px solid #6e6e73;
+            border-bottom: 2px solid #6e6e73;
+            transform: rotate(45deg);
+            margin-left: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        details.source-group[open] summary.source-summary::after {
+            transform: rotate(225deg);
+        }
+
+        .source-badge {
+            display: inline-block;
+            background-color: #f3e8ff;
+            color: #7c3aed;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .source-content {
+            padding: 16px;
+            border-top: 1px solid #e5e5e7;
+            background-color: #fff;
+        }
+
+        /* Animation for Browser */
+        details.source-group[open] .source-content {
+            animation: slide-down 0.3s ease-out;
+        }
+
+        @keyframes slide-down {
+            0% { opacity: 0; transform: translateY(-5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════ NEWS CARD ═══════ */
+        .card {
+            padding: 20px;
+            margin-bottom: 16px;
+            background-color: #ffffff;
+            border: 1px solid #e5e5e7;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.04);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .card:last-child {
+            margin-bottom: 0;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .card-title a {
+            color: #1d1d1f;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card-title a:hover {
+            color: #7c3aed;
+            border-bottom-color: #7c3aed;
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: #6e6e73;
+            margin-bottom: 12px;
+        }
+
+        .card-source {
+            display: inline-block;
+            padding: 4px 10px;
+            background-color: #f3e8ff;
+            color: #7c3aed;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        .card-summary {
+            font-size: 14px;
+            color: #6e6e73;
+            line-height: 1.65;
+            margin-bottom: 14px;
+        }
+
+        .card-link {
+            display: inline-block;
+            padding: 8px 14px;
+            background-color: #f3e8ff;
+            color: #7c3aed;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .card-link:hover {
+            background-color: #ede9fe;
+            transform: translateX(2px);
+        }
+
+        .card-link-arrow {
+            margin-left: 4px;
+        }
+
+        /* ═══════ EMPTY STATE ═══════ */
+        .empty {
+            text-align: center;
+            padding: 32px 24px;
+            color: #6e6e73;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* ═══════ FOOTER ═══════ */
+        .footer {
+            padding: 40px 24px;
+            text-align: center;
+            background-color: #fafafa;
+        }
+
+        .footer-brand {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+
+        .footer-tagline {
+            font-size: 12px;
+            color: #6e6e73;
+            margin-bottom: 16px;
+        }
+
+        .footer-divider {
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, #7c3aed, #fb923c);
+            margin: 16px auto;
+            border-radius: 1px;
+        }
+
+        .footer-credits {
+            font-size: 11px;
+            color: #8e8e93;
+        }
+
+        .footer-credits a {
+            color: #7c3aed;
+            text-decoration: none;
+        }
+
+        .footer-credits a:hover {
+            text-decoration: underline;
+        }
+
+        /* ═══════ TOC & EXTRAS ═══════ */
+        .toc-nav {
+            padding: 0 24px 24px;
+            text-align: center;
+            background-color: #fafafa;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .toc-link {
+            display: inline-block;
+            padding: 6px 14px;
+            margin: 4px;
+            background-color: #ffffff;
+            border: 1px solid #e5e5e7;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6e6e73;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .toc-link:hover {
+            border-color: #7c3aed;
+            color: #7c3aed;
+            background-color: #f3e8ff;
+        }
+
+        .chart-wrapper {
+            padding: 32px 24px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e5e7;
+            text-align: center;
+            display: none;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 44px;
+            height: 44px;
+            background-color: #7c3aed;
+            color: white !important;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 44px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            text-decoration: none;
+            font-size: 20px;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background-color: #6d28d9;
+            transform: translateY(-2px);
+        }
+
+        /* ═══════ RESPONSIVE ═══════ */
+        @media only screen and (max-width: 600px) {
+            .container { width: 100% !important; max-width: 100% !important; box-shadow: none; }
+            .hero { padding: 32px 16px 24px; }
+            .hero h1 { font-size: 24px; }
+            .section { padding: 20px 12px; }
+            .card { padding: 16px; margin-bottom: 12px; }
+            .stat-value { font-size: 18px; }
+            .stat-label { font-size: 10px; }
+            .section-title { font-size: 15px; }
+        }
+
+        /* ══════════════════════════════════════════════════════════
+           DARK MODE ADAPTATION (CINEMA UI)
+           ══════════════════════════════════════════════════════════ */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #050508 !important;
+                color: #e8e8ec !important;
+            }
+
+            .container {
+                background-color: #0d0d12 !important;
+                box-shadow: 0 0 60px rgba(0, 0, 0, 0.5) !important;
+            }
+
+            .hero {
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .brand {
+                color: #a855f7 !important;
+                text-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+            }
+
+            .hero h1 {
+                color: #ffffff !important;
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            }
+
+            .hero .date {
+                color: rgba(255, 255, 255, 0.6) !important;
+            }
+
+            .hero .date a {
+                color: #c084fc !important;
+            }
+
+            .stats {
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .stat-item {
+                border-right-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .stat-value {
+                color: #c084fc !important;
+                text-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
+            }
+
+            .stat-label {
+                color: rgba(255, 255, 255, 0.5) !important;
+            }
+
+            .section {
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .section-icon {
+                background-color: rgba(168, 85, 247, 0.2) !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            }
+
+            .section-icon-orange {
+                background-color: rgba(251, 146, 60, 0.2) !important;
+                box-shadow: 0 0 10px rgba(251, 146, 60, 0.2);
+            }
+
+            .section-title {
+                color: #ffffff !important;
+            }
+
+            /* Cinema Card Style */
+            .card {
+                background-color: #1a1a24 !important;
+                border: 1px solid rgba(124, 58, 237, 0.15) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+            }
+
+            .card:hover {
+                background-color: #20202b !important;
+                border-color: rgba(124, 58, 237, 0.4) !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 15px rgba(124, 58, 237, 0.15) !important;
+                transform: translateY(-2px);
+            }
+
+            .card-title a {
+                color: #ffffff !important;
+            }
+
+            .card-title a:hover {
+                color: #c084fc !important;
+                border-bottom-color: #c084fc !important;
+                text-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
+            }
+
+            .card-meta {
+                color: rgba(255, 255, 255, 0.5) !important;
+            }
+
+            .card-source {
+                background-color: rgba(168, 85, 247, 0.15) !important;
+                color: #d8b4fe !important;
+                border: 1px solid rgba(168, 85, 247, 0.2) !important;
+            }
+
+            .card-summary {
+                color: rgba(255, 255, 255, 0.7) !important;
+            }
+
+            .card-link {
+                background-color: rgba(168, 85, 247, 0.15) !important;
+                color: #d8b4fe !important;
+                border: 1px solid rgba(168, 85, 247, 0.2) !important;
+            }
+
+            .card-link:hover {
+                background-color: rgba(168, 85, 247, 0.3) !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            }
+
+            .footer {
+                background-color: #050508 !important;
+            }
+
+            .footer-brand {
+                color: rgba(255, 255, 255, 0.8) !important;
+            }
+
+            .footer-tagline {
+                color: rgba(255, 255, 255, 0.4) !important;
+            }
+
+            .footer-credits {
+                color: rgba(255, 255, 255, 0.3) !important;
+            }
+
+            .footer-credits a {
+                color: rgba(168, 85, 247, 0.7) !important;
+            }
+
+            /* Dark Mode for Source Groups */
+            details.source-group {
+                background-color: #1a1a24 !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+                box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+            }
+
+            summary.source-summary {
+                background-color: #20202b !important;
+                color: #ffffff !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            summary.source-summary:hover {
+                background-color: #252532 !important;
+            }
+
+            .source-badge {
+                background-color: rgba(168, 85, 247, 0.2) !important;
+                color: #d8b4fe !important;
+            }
+
+            .source-content {
+                background-color: transparent !important;
+                border-top-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .toc-nav {
+                background-color: #13131a !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            .toc-link {
+                background-color: #1a1a24 !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+                color: #e8e8ec !important;
+            }
+
+            .toc-link:hover {
+                background-color: rgba(168, 85, 247, 0.2) !important;
+                border-color: #c084fc !important;
+                color: #c084fc !important;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            }
+
+            .chart-wrapper {
+                background-color: #0d0d12 !important;
+                border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════════
+           CSS ANIMATIONS (Apple Mail & WebKit)
+           ══════════════════════════════════════════════════════════ */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            @keyframes glow-pulse {
+                0%, 100% { opacity: 0.7; }
+                50% { opacity: 1; }
+            }
+
+            .hero-glow-line {
+                animation: glow-pulse 3s ease-in-out infinite;
+            }
+
+            @keyframes fade-slide-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .card {
+                animation: fade-slide-in 0.4s ease-out;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ═══════ HERO ═══════ -->
+        <div class="hero">
+            <div class="hero-glow-line"></div>
+            <div class="brand">NewsPocket</div>
+            <h1>每日资讯简报</h1>
+            <div class="date">{{ .Date }}</div>
+        </div>
+
+        <!-- ═══════ TOC ═══════ -->
+        <div class="toc-nav">
+            {{ range .Sections }}
+            <a href="#cat-{{ .Index }}" class="toc-link">{{ .Name }}</a>
+            {{ end }}
+        </div>
+
+        <!-- ═══════ STATS ═══════ -->
+        <table class="stats" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+                <td class="stat-item" width="33%">
+                    <div class="stat-value">{{ .TotalCount }}</div>
+                    <div class="stat-label">资讯</div>
+                </td>
+                <td class="stat-item" width="34%">
+                    <div class="stat-value">{{ .SourceCount }}</div>
+                    <div class="stat-label">来源</div>
+                </td>
+                <td class="stat-item" width="33%">
+                    <div class="stat-value">{{ .CategoryCount }}</div>
+                    <div class="stat-label">板块</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ═══════ CHART ═══════ -->
+        <!--[if !mso]><!-->
+        <div class="chart-wrapper" id="chartWrapper">
+             <div class="chart-container">
+                 <canvas id="sourceChart"></canvas>
+             </div>
+        </div>
+        <!--<![endif]-->
+
+        <!-- ═══════ NEWS SECTIONS ═══════ -->
+        {{ range .Sections }}
+        <div class="section" id="cat-{{ .Index }}">
+            <div class="section-header">
+                <table cellpadding="0" cellspacing="0" border="0" style="width: auto;">
+                    <tr>
+                        {{ categoryIcon .Name }}
+                        <td class="section-title">{{ .Name }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            {{ if .Groups }}
+                <!--[if mso]>
+                <style>
+                    .source-group { border: none !important; margin: 0 !important; }
+                    .source-summary { display: none !important; }
+                    .source-content { display: block !important; padding: 0 !important; border: none !important; }
+                </style>
+                <![endif]-->
+
+                {{ range .Groups }}
+                    <details class="source-group"{{ if not .Collapsed }} open{{ end }}>
+                        <summary class="source-summary">
+                            <span>
+                                {{ .Name }}
+                                <span class="source-badge">{{ len .Items }}</span>
+                            </span>
+                        </summary>
+                        <div class="source-content">
+                            {{ range .Items }}
+                            <div class="card">
+                                <div class="card-title">
+                                    <a href="{{ .Link }}" target="_blank">{{ .Title }}</a>
+                                </div>
+                                <div class="card-meta">
+                                    <span class="card-source">{{ .Source }}</span>
+                                    <span>{{ .Time }}</span>
+                                </div>
+                                {{ if .Summary }}
+                                <div class="card-summary">{{ .Summary }}</div>
+                                {{ end }}
+                                <a href="{{ .Link }}" class="card-link" target="_blank">阅读原文<span class="card-link-arrow"> →</span></a>
+                            </div>
+                            {{ end }}
+                        </div>
+                    </details>
+                {{ end }}
+            {{ else }}
+                <div class="empty">暂无该板块的最新资讯</div>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        <!-- ═══════ FOOTER ═══════ -->
+        <div class="footer">
+            <div class="footer-brand">NEWSPOCKET</div>
+            <div class="footer-tagline">自动聚合 · 精选推送 · 每日六点</div>
+            <div class="footer-divider"></div>
+            <div class="footer-credits">
+                Powered by <a href="https://github.com" target="_blank">GitHub Actions</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════ BACK TO TOP ═══════ -->
+    <a href="#" class="back-to-top" id="backToTop" title="回到顶部">↑</a>
+
+    <!-- ═══════ SCRIPTS ═══════ -->
+    <!-- Chart.js for visualization (Browser only) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. BACK TO TOP LOGIC
+            const backToTopBtn = document.getElementById('backToTop');
+
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            });
+
+            backToTopBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // 2. CHART LOGIC
+            const ctx = document.getElementById('sourceChart');
+            if (typeof Chart !== 'undefined' && ctx) {
+                const sources = document.querySelectorAll('.card-source');
+                const sourceCounts = {};
+
+                sources.forEach(el => {
+                    const source = el.textContent.trim();
+                    sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+                });
+
+                const labels = Object.keys(sourceCounts);
+                const data = Object.values(sourceCounts);
+
+                const backgroundColors = [
+                    '#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe',
+                    '#ea580c', '#f97316', '#fb923c', '#fdba74'
+                ];
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors.slice(0, labels.length),
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: { family: "-apple-system, sans-serif", size: 11 },
+                                    boxWidth: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '资讯来源分布',
+                                font: { size: 14, weight: 'bold' },
+                                padding: { bottom: 20 }
+                            }
+                        },
+                        layout: {
+                            padding: 20
+                        }
+                    }
+                });
+
+                document.getElementById('chartWrapper').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
