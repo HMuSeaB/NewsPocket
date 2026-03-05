@@ -3,13 +3,15 @@ package renderer
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"html/template"
-	"os"
-	"path/filepath"
 
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
 )
+
+//go:embed templates/email.gohtml
+var templateFS embed.FS
 
 // TemplateData 邮件模板的上下文数据
 type TemplateData struct {
@@ -23,30 +25,22 @@ type TemplateData struct {
 
 // Renderer HTML 模板渲染器
 type Renderer struct {
-	templateDir string
 }
 
 // New 创建渲染器
-func New(templateDir string) *Renderer {
-	return &Renderer{templateDir: templateDir}
+func New() *Renderer {
+	return &Renderer{}
 }
 
 // Render 渲染邮件模板
 func (r *Renderer) Render(data TemplateData) (string, error) {
-	tmplPath := filepath.Join(r.templateDir, "email.gohtml")
-
-	// 检查模板文件
-	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("模板文件不存在: %s", tmplPath)
-	}
-
 	// 自定义模板函数
 	funcMap := template.FuncMap{
 		"categoryIcon": categoryIcon,
 		"sub":          func(a, b int) int { return a - b },
 	}
 
-	tmpl, err := template.New("email.gohtml").Funcs(funcMap).ParseFiles(tmplPath)
+	tmpl, err := template.New("email.gohtml").Funcs(funcMap).ParseFS(templateFS, "templates/email.gohtml")
 	if err != nil {
 		return "", fmt.Errorf("模板解析失败: %w", err)
 	}

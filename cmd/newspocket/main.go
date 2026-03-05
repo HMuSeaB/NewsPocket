@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/HMuSeaB/NewsPocket/internal/config"
@@ -86,10 +85,7 @@ func main() {
 	beijing := time.FixedZone("CST", 8*3600)
 	today := time.Now().In(beijing).Format("2006年01月02日 Monday")
 
-	// 确定模板目录（相对于可执行文件或当前目录）
-	templateDir := resolveTemplateDir()
-
-	r := renderer.New(templateDir)
+	r := renderer.New()
 
 	titleSuffix := ""
 	if *testMode {
@@ -134,21 +130,4 @@ func main() {
 	}
 
 	slog.Info("=== NewsPocket 运行完成 ===")
-}
-
-// resolveTemplateDir 按优先级查找模板目录：
-// 1. 可执行文件同级的 templates/
-// 2. 当前工作目录的 templates/
-func resolveTemplateDir() string {
-	// 尝试可执行文件所在目录
-	exe, err := os.Executable()
-	if err == nil {
-		dir := filepath.Join(filepath.Dir(exe), "templates")
-		if _, err := os.Stat(dir); err == nil {
-			return dir
-		}
-	}
-
-	// 回退到工作目录
-	return "templates"
 }
