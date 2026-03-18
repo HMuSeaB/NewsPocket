@@ -190,10 +190,8 @@ func (p *Parser) parseFeedResult(result fetcher.FetchResult, maxItems int) (item
 
 // parseEntry 解析单个条目
 func (p *Parser) parseEntry(entry fetcher.Entry, source config.Source) *NewsItem {
-	isJSONAPI := entry.SourceType == "json_api"
-
-	// 时间过滤（JSON API 放宽限制，可能没有时间字段）
-	if !isJSONAPI && !p.isRecent(entry.Published) {
+	// 对所有来源统一做时间过滤；零值时间仍然会保留。
+	if !p.isRecent(entry.Published) {
 		return nil
 	}
 

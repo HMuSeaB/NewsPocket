@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"mime"
 	"net"
 	"net/smtp"
 	"os"
@@ -71,7 +72,7 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 	// 构建邮件内容 (MIME)
 	header := fmt.Sprintf("From: NewsPocket <%s>\r\n", cfg.User)
 	header += fmt.Sprintf("To: %s\r\n", strings.Join(cfg.Recipients, ","))
-	header += fmt.Sprintf("Subject: %s\r\n", subject)
+	header += fmt.Sprintf("Subject: %s\r\n", encodeHeaderValue(subject))
 	header += "MIME-Version: 1.0\r\n"
 	header += "Content-Type: text/html; charset=UTF-8\r\n"
 	header += "\r\n"
@@ -126,4 +127,17 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 
 	slog.Info("邮件发送成功", "recipients", cfg.Recipients)
 	return nil
+}
+
+func encodeHeaderValue(value string) string {
+	clean := strings.NewReplacer("\r", "", "\n", "").Replace(value)
+	if clean == "" {
+		return ""
+	}
+	for _, r := range clean {
+		if r > 127 {
+			return mime.QEncoding.Encode("utf-8", clean)
+		}
+	}
+	return clean
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -31,18 +32,18 @@ func fetchJSONAPI(ctx context.Context, source config.Source, client *http.Client
 
 	var req *http.Request
 	var err error
+	var bodyReader io.Reader
 
+	if len(source.Body) > 0 {
+		bodyReader = bytes.NewReader(source.Body)
+	}
+
+	req, err = http.NewRequestWithContext(ctx, method, source.URL, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("创建 %s 请求失败: %w", method, err)
+	}
 	if method == http.MethodPost && len(source.Body) > 0 {
-		req, err = http.NewRequestWithContext(ctx, method, source.URL, bytes.NewReader(source.Body))
-		if err != nil {
-			return nil, fmt.Errorf("创建 POST 请求失败: %w", err)
-		}
 		req.Header.Set("Content-Type", "application/json")
-	} else {
-		req, err = http.NewRequestWithContext(ctx, http.MethodGet, source.URL, nil)
-		if err != nil {
-			return nil, fmt.Errorf("创建 GET 请求失败: %w", err)
-		}
 	}
 
 	applyHeaders(req, source.Headers)

@@ -23,6 +23,7 @@ const DOM = {
     fType: document.getElementById('type'),
     fjItemsPath: document.getElementById('items_path'),
     fjTitle: document.getElementById('title_field'),
+    fjSummary: document.getElementById('summary_field'),
     fjTime: document.getElementById('time_field'),
     fjLink: document.getElementById('link_field'),
     fjLinkTpl: document.getElementById('link_template')
@@ -121,6 +122,7 @@ function selectSource(index) {
         const jc = src.json_config || {};
         DOM.fjItemsPath.value = jc.items_path || '';
         DOM.fjTitle.value = jc.title_field || '';
+        DOM.fjSummary.value = jc.summary_field || '';
         DOM.fjTime.value = jc.time_field || '';
         DOM.fjLink.value = jc.link_field || '';
         DOM.fjLinkTpl.value = jc.link_template || '';
@@ -163,8 +165,10 @@ function syncFormToState() {
 
     if (src.type === 'json_api') {
         src.json_config = {
+            ...(src.json_config || {}),
             items_path: DOM.fjItemsPath.value,
             title_field: DOM.fjTitle.value,
+            summary_field: DOM.fjSummary.value,
             time_field: DOM.fjTime.value,
             link_field: DOM.fjLink.value,
             link_template: DOM.fjLinkTpl.value
