@@ -1,11 +1,9 @@
 package fetcher
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -30,25 +28,7 @@ func fetchJSONAPI(ctx context.Context, source config.Source, client *http.Client
 		method = http.MethodGet
 	}
 
-	var req *http.Request
-	var err error
-	var bodyReader io.Reader
-
-	if len(source.Body) > 0 {
-		bodyReader = bytes.NewReader(source.Body)
-	}
-
-	req, err = http.NewRequestWithContext(ctx, method, source.URL, bodyReader)
-	if err != nil {
-		return nil, fmt.Errorf("创建 %s 请求失败: %w", method, err)
-	}
-	if method == http.MethodPost && len(source.Body) > 0 {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	applyHeaders(req, source.Headers)
-
-	resp, err := client.Do(req)
+	resp, err := doRequestWithRetry(ctx, client, source, method)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}

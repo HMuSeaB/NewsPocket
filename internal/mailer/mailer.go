@@ -79,17 +79,36 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 
 	message := []byte(header + htmlContent)
 
-	// SSL/TLS 连接
 	tlsConfig := &tls.Config{
 		ServerName: cfg.Host,
 	}
 
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
-	if err != nil {
-		return fmt.Errorf("TLS 连接失败: %w", err)
+	var client *smtp.Client
+	var err error
+
+	if cfg.Port == "465" {
+		// 隐式 SSL/TLS (通常为 465)
+		conn, dialErr := tls.Dial("tcp", addr, tlsConfig)
+		if dialErr != nil {
+			return fmt.Errorf("TLS 连接失败: %w", dialErr)
+		}
+		client, err = smtp.NewClient(conn, cfg.Host)
+	} else {
+		// 显式 STARTTLS (通常为 587, 25 等)
+		conn, dialErr := net.Dial("tcp", addr)
+		if dialErr != nil {
+			return fmt.Errorf("TCP 连接失败: %w", dialErr)
+		}
+		client, err = smtp.NewClient(conn, cfg.Host)
+		if err == nil {
+			if ok, _ := client.Extension("STARTTLS"); ok {
+				if err = client.StartTLS(tlsConfig); err != nil {
+					return fmt.Errorf("STARTTLS 握手失败: %w", err)
+				}
+			}
+		}
 	}
 
-	client, err := smtp.NewClient(conn, cfg.Host)
 	if err != nil {
 		return fmt.Errorf("SMTP 客户端创建失败: %w", err)
 	}

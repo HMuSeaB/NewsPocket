@@ -3,7 +3,10 @@
 package fetcher
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -137,4 +140,53 @@ func (f *Fetcher) FetchSingle(source config.Source) (*FetchResult, error) {
 	default:
 		return fetchRSS(ctx, source, f.client)
 	}
+}
+
+// doRequestWithRetry 包装 HTTP 请求，提供指数退避的自动重试机制
+func doRequestWithRetry(ctx context.Context, client *http.Client, source config.Source, method string) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+	maxRetries := 3
+
+	for i := 0; i < maxRetries; i++ {
+		var bodyReader io.Reader
+		if len(source.Body) > 0 {
+			bodyReader = bytes.NewReader(source.Body)
+		}
+
+		req, reqErr := http.NewRequestWithContext(ctx, method, source.URL, bodyReader)
+		if reqErr != nil {
+			return nil, fmt.Errorf("创建请求失败: %w", reqErr)
+		}
+
+		if method == http.MethodPost && len(source.Body) > 0 {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		applyHeaders(req, source.Headers)
+
+		resp, err = client.Do(req)
+
+		// 成功或明确的 4xx 错误则不再重试
+		if err == nil && resp.StatusCode < 500 {
+			return resp, nil
+		}
+
+		if resp != nil {
+			resp.Body.Close()
+		}
+
+		if i < maxRetries-1 {
+			slog.Warn("请求异常准备重试", "source", source.Name, "retry", i+1, "error", err)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(time.Duration(i+1) * 2 * time.Second): // 2s, 4s...
+			}
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("经过 %d 次重试后失败: %w", maxRetries, err)
+	}
+	return nil, fmt.Errorf("经过 %d 次重试后仍然失败 (可能由于 5xx 状态码)", maxRetries)
 }

@@ -17,15 +17,7 @@ func fetchRSS(ctx context.Context, source config.Source, client *http.Client) (*
 	logger := slog.With("source", source.Name)
 	logger.Info("开始抓取 RSS", "url", source.URL)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.URL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
-	}
-
-	// 设置默认和自定义 headers
-	applyHeaders(req, source.Headers)
-
-	resp, err := client.Do(req)
+	resp, err := doRequestWithRetry(ctx, client, source, http.MethodGet)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
