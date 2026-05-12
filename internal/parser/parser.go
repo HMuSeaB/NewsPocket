@@ -141,13 +141,23 @@ func formatTime(t time.Time) string {
 	return t.In(beijing).Format("2006-01-02 15:04")
 }
 
-// ParseAll 解析所有抓取结果，返回按时间排序的条目列表
+// ParseAll 解析所有抓取结果，实现跨源全局去重，返回按时间排序的条目列表
 func (p *Parser) ParseAll(results []fetcher.FetchResult, maxPerSource int) []NewsItem {
 	var allItems []NewsItem
+	globalSeen := make(map[string]bool)
 
 	for _, result := range results {
 		items := p.parseFeedResult(result, maxPerSource)
-		allItems = append(allItems, items...)
+		for _, item := range items {
+			hash := item.Link
+			if hash == "" {
+				hash = item.Title
+			}
+			if !globalSeen[hash] {
+				globalSeen[hash] = true
+				allItems = append(allItems, item)
+			}
+		}
 	}
 
 	// 全局按时间排序（最新在前）
@@ -169,10 +179,19 @@ func (p *Parser) parseFeedResult(result fetcher.FetchResult, maxItems int) (item
 		}
 	}()
 
+	seen := make(map[string]bool)
+
 	for _, entry := range result.Entries {
 		item := p.parseEntry(entry, result.Source)
 		if item != nil {
-			items = append(items, *item)
+			hash := item.Link
+			if hash == "" {
+				hash = item.Title
+			}
+			if !seen[hash] {
+				seen[hash] = true
+				items = append(items, *item)
+			}
 		}
 	}
 

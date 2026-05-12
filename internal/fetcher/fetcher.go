@@ -78,10 +78,16 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 		results []FetchResult
 	)
 
+	// 使用 Channel 信号量限制全局并发数，防止触发反爬或协程风暴
+	sem := make(chan struct{}, 15)
+
 	for _, src := range sources {
 		wg.Add(1)
+		sem <- struct{}{} // 阻塞获取信号量
+
 		go func(s config.Source) {
 			defer wg.Done()
+			defer func() { <-sem }() // 释放信号量
 
 			ctx, cancel := context.WithTimeout(context.Background(), f.timeout)
 			defer cancel()
