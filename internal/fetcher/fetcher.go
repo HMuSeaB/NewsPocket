@@ -56,6 +56,10 @@ var defaultHeaders = map[string]string{
 	"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 }
 
+var retryDelay = func(attempt int) time.Duration {
+	return time.Duration(attempt+1) * 2 * time.Second
+}
+
 // applyHeaders 设置默认 headers 并覆盖为自定义 headers
 func applyHeaders(req *http.Request, custom map[string]string) {
 	for k, v := range defaultHeaders {
@@ -180,7 +184,7 @@ func doRequestWithRetry(ctx context.Context, client *http.Client, source config.
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-time.After(time.Duration(i+1) * 2 * time.Second): // 2s, 4s...
+			case <-time.After(retryDelay(i)): // 2s, 4s...
 			}
 		}
 	}

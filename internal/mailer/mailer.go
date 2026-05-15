@@ -93,6 +93,9 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 			return fmt.Errorf("TLS 连接失败: %w", dialErr)
 		}
 		client, err = smtp.NewClient(conn, cfg.Host)
+		if err != nil {
+			_ = conn.Close()
+		}
 	} else {
 		// 显式 STARTTLS (通常为 587, 25 等)
 		conn, dialErr := net.Dial("tcp", addr)
@@ -100,9 +103,13 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 			return fmt.Errorf("TCP 连接失败: %w", dialErr)
 		}
 		client, err = smtp.NewClient(conn, cfg.Host)
+		if err != nil {
+			_ = conn.Close()
+		}
 		if err == nil {
 			if ok, _ := client.Extension("STARTTLS"); ok {
 				if err = client.StartTLS(tlsConfig); err != nil {
+					_ = client.Close()
 					return fmt.Errorf("STARTTLS 握手失败: %w", err)
 				}
 			}
