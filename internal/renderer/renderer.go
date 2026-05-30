@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"sort"
 
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
 )
@@ -21,6 +22,14 @@ type TemplateData struct {
 	SourceCount   int
 	CategoryCount int
 	Sections      []parser.CategorySection
+	SourceStats   []SourceStat // 新增：各来源抓取数量统计，用于纯 HTML/CSS 进度条绘制
+}
+
+// SourceStat 来源抓取量统计结构
+type SourceStat struct {
+	Name       string
+	Count      int
+	Percentage int
 }
 
 // Renderer HTML 模板渲染器
@@ -34,6 +43,39 @@ func New() *Renderer {
 
 // Render 渲染邮件模板
 func (r *Renderer) Render(data TemplateData) (string, error) {
+	// 自动计算各来源抓取数量和占比
+	if len(data.SourceStats) == 0 && data.TotalCount > 0 {
+		statsMap := make(map[string]int)
+		for _, sec := range data.Sections {
+			for _, grp := range sec.Groups {
+				statsMap[grp.Name] += len(grp.Items)
+			}
+		}
+
+		var stats []SourceStat
+		for name, count := range statsMap {
+			pct := 0
+			if data.TotalCount > 0 {
+				pct = count * 100 / data.TotalCount
+				if pct == 0 && count > 0 {
+					pct = 1 // 至少保留 1% 宽度以显示进度条
+				}
+			}
+			stats = append(stats, SourceStat{
+				Name:       name,
+				Count:      count,
+				Percentage: pct,
+			})
+		}
+
+		// 按抓取数量从高到低排序
+		sort.Slice(stats, func(i, j int) bool {
+			return stats[i].Count > stats[j].Count
+		})
+
+		data.SourceStats = stats
+	}
+
 	// 自定义模板函数
 	funcMap := template.FuncMap{
 		"categoryIcon": categoryIcon,

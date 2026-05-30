@@ -407,66 +407,19 @@
         }
 
         .chart-wrapper {
-            padding: 24px;
-            background-color: #fafafa;
+            padding: 32px 24px;
+            background-color: #ffffff;
             border-bottom: 1px solid #e5e5e7;
+            text-align: center;
+            display: none;
         }
 
-        .chart-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: #1d1d1f;
-            margin-bottom: 16px;
-            text-align: left;
-            letter-spacing: 0.5px;
-        }
-
-        .progress-table {
-            border-collapse: collapse;
+        .chart-container {
+            position: relative;
+            height: 250px;
             width: 100%;
-        }
-
-        .progress-row td {
-            padding: 8px 0;
-            vertical-align: middle;
-            font-size: 12px;
-        }
-
-        .progress-label {
-            color: #515154;
-            font-weight: 600;
-            text-align: left;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-right: 8px !important;
-        }
-
-        .progress-bar-cell {
-            padding-right: 12px !important;
-        }
-
-        .progress-bg {
-            height: 8px;
-            background-color: #e5e5e7;
-            border-radius: 4px;
-            overflow: hidden;
-            width: 100%;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.6s ease-in-out;
-        }
-
-        .progress-value {
-            color: #6e6e73;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-            white-space: nowrap;
+            max-width: 480px;
+            margin: 0 auto;
         }
 
         .back-to-top {
@@ -482,10 +435,17 @@
             line-height: 44px;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+            opacity: 0;
+            visibility: hidden;
             transition: all 0.3s ease;
             z-index: 1000;
             text-decoration: none;
             font-size: 20px;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
         }
 
         .back-to-top:hover {
@@ -693,29 +653,8 @@
             }
 
             .chart-wrapper {
-                background-color: #13131a !important;
+                background-color: #0d0d12 !important;
                 border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-            }
-
-            .chart-title {
-                color: #ffffff !important;
-            }
-
-            .progress-label {
-                color: #a1a1aa !important;
-            }
-
-            .progress-bg {
-                background-color: #27272a !important;
-            }
-
-            .progress-fill {
-                background: linear-gradient(90deg, #ff6b4a 0%, #f97316 100%) !important;
-                box-shadow: 0 0 8px rgba(255, 107, 74, 0.5) !important;
-            }
-
-            .progress-value {
-                color: rgba(255, 255, 255, 0.6) !important;
             }
         }
 
@@ -785,23 +724,14 @@
             </tr>
         </table>
 
-        <!-- ═══════ CHART (纯 HTML/CSS Cinematic Dusk 进度条) ═══════ -->
+        <!-- ═══════ CHART ═══════ -->
+        <!--[if !mso]><!-->
         <div class="chart-wrapper" id="chartWrapper">
-             <div class="chart-title">资讯来源分布统计</div>
-             <table class="progress-table" width="100%" cellpadding="0" cellspacing="0" border="0">
-                 {{ range .SourceStats }}
-                 <tr class="progress-row">
-                     <td class="progress-label" width="25%">{{ .Name }}</td>
-                     <td class="progress-bar-cell" width="60%">
-                         <div class="progress-bg">
-                             <div class="progress-fill" style="width: {{ .Percentage }}%;"></div>
-                         </div>
-                     </td>
-                     <td class="progress-value" width="15%">{{ .Count }} 条 ({{ .Percentage }}%)</td>
-                 </tr>
-                 {{ end }}
-             </table>
+             <div class="chart-container">
+                 <canvas id="sourceChart"></canvas>
+             </div>
         </div>
+        <!--<![endif]-->
 
         <!-- ═══════ NEWS SECTIONS ═══════ -->
         {{ range .Sections }}
@@ -872,5 +802,85 @@
     <!-- ═══════ BACK TO TOP ═══════ -->
     <a href="#" class="back-to-top" id="backToTop" title="回到顶部">↑</a>
 
+    <!-- ═══════ SCRIPTS ═══════ -->
+    <!-- Chart.js for visualization (Browser only) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. BACK TO TOP LOGIC
+            const backToTopBtn = document.getElementById('backToTop');
+
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            });
+
+            backToTopBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // 2. CHART LOGIC
+            const ctx = document.getElementById('sourceChart');
+            if (typeof Chart !== 'undefined' && ctx) {
+                const sources = document.querySelectorAll('.card-source');
+                const sourceCounts = {};
+
+                sources.forEach(el => {
+                    const source = el.textContent.trim();
+                    sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+                });
+
+                const labels = Object.keys(sourceCounts);
+                const data = Object.values(sourceCounts);
+
+                const backgroundColors = [
+                    '#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe',
+                    '#ea580c', '#f97316', '#fb923c', '#fdba74'
+                ];
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors.slice(0, labels.length),
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: { family: "-apple-system, sans-serif", size: 11 },
+                                    boxWidth: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '资讯来源分布',
+                                font: { size: 14, weight: 'bold' },
+                                padding: { bottom: 20 }
+                            }
+                        },
+                        layout: {
+                            padding: 20
+                        }
+                    }
+                });
+
+                document.getElementById('chartWrapper').style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>

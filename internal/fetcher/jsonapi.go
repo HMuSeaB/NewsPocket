@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -133,10 +134,24 @@ func buildLink(item map[string]any, linkField, linkTemplate string) string {
 	if linkTemplate != "" {
 		// 模板格式: "https://example.com/{id}"
 		link := linkTemplate
+		queryIdx := strings.Index(linkTemplate, "?")
+		
 		for key, value := range item {
 			placeholder := "{" + key + "}"
-			if strings.Contains(link, placeholder) {
-				link = strings.ReplaceAll(link, placeholder, fmt.Sprintf("%v", value))
+			placeholderIdx := strings.Index(linkTemplate, placeholder)
+			
+			if placeholderIdx != -1 {
+				valStr := fmt.Sprintf("%v", value)
+				var escapedVal string
+				
+				// 智能自动编码：当占位符在 Query 部分（问号之后），采用 QueryEscape；否则采用 PathEscape
+				if queryIdx != -1 && placeholderIdx > queryIdx {
+					escapedVal = url.QueryEscape(valStr)
+				} else {
+					escapedVal = url.PathEscape(valStr)
+				}
+				
+				link = strings.ReplaceAll(link, placeholder, escapedVal)
 			}
 		}
 		return link
@@ -176,6 +191,14 @@ func parseTimeString(s string) time.Time {
 		var ts int64
 		if _, err := fmt.Sscanf(s, "%d", &ts); err == nil && ts > 1000000000 {
 			return time.Unix(ts, 0).UTC()
+		}
+	}
+
+	// 尝试 Unix 时间戳（毫秒）
+	if len(s) == 13 {
+		var ts int64
+		if _, err := fmt.Sscanf(s, "%d", &ts); err == nil && ts > 1000000000000 {
+			return time.UnixMilli(ts).UTC()
 		}
 	}
 
