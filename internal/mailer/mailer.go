@@ -10,6 +10,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"time"
 )
 
 // Config 邮件配置，从环境变量读取
@@ -83,12 +84,16 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 		ServerName: cfg.Host,
 	}
 
+	dialer := &net.Dialer{
+		Timeout: 10 * time.Second,
+	}
+
 	var client *smtp.Client
 	var err error
 
 	if cfg.Port == "465" {
 		// 隐式 SSL/TLS (通常为 465)
-		conn, dialErr := tls.Dial("tcp", addr, tlsConfig)
+		conn, dialErr := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
 		if dialErr != nil {
 			return fmt.Errorf("TLS 连接失败: %w", dialErr)
 		}
@@ -98,7 +103,7 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 		}
 	} else {
 		// 显式 STARTTLS (通常为 587, 25 等)
-		conn, dialErr := net.Dial("tcp", addr)
+		conn, dialErr := dialer.Dial("tcp", addr)
 		if dialErr != nil {
 			return fmt.Errorf("TCP 连接失败: %w", dialErr)
 		}

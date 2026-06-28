@@ -94,3 +94,69 @@ func TestBuildLinkSmartURLEscape(t *testing.T) {
 		t.Errorf("expected %q, got %q for PathEscape", expectedPath, resultPath)
 	}
 }
+
+func TestGetStringNestedPath(t *testing.T) {
+	item := map[string]any{
+		"title": "Flat Title",
+		"detail": map[string]any{
+			"subtitle": "Nested Subtitle",
+			"meta": map[string]any{
+				"author": "Alice",
+				"views":  1234.0,
+			},
+		},
+	}
+
+	// 1. 测试扁平提取
+	if val := getString(item, "title"); val != "Flat Title" {
+		t.Errorf("expected 'Flat Title', got %q", val)
+	}
+
+	// 2. 测试二级嵌套提取
+	if val := getString(item, "detail.subtitle"); val != "Nested Subtitle" {
+		t.Errorf("expected 'Nested Subtitle', got %q", val)
+	}
+
+	// 3. 测试三级嵌套提取
+	if val := getString(item, "detail.meta.author"); val != "Alice" {
+		t.Errorf("expected 'Alice', got %q", val)
+	}
+
+	// 4. 测试数值类型嵌套提取与格式化
+	if val := getString(item, "detail.meta.views"); val != "1234" {
+		t.Errorf("expected '1234', got %q", val)
+	}
+
+	// 5. 测试不存在的嵌套键
+	if val := getString(item, "detail.nonexistent.key"); val != "" {
+		t.Errorf("expected empty string, got %q", val)
+	}
+}
+
+func TestBuildLinkNestedPlaceholder(t *testing.T) {
+	item := map[string]any{
+		"id": "123",
+		"author": map[string]any{
+			"name": "Bob 🚀", // 包含空格和表情
+		},
+		"category": map[string]any{
+			"tag": "tech/news",
+		},
+	}
+
+	// 1. 嵌套占位符在 Query 部分（问号之后），使用 QueryEscape
+	templateQuery := "https://example.com/search?author={author.name}&id={id}"
+	resultQuery := buildLink(item, "", templateQuery)
+	expectedQuery := "https://example.com/search?author=" + url.QueryEscape("Bob 🚀") + "&id=123"
+	if resultQuery != expectedQuery {
+		t.Errorf("expected %q, got %q for QueryEscape with nested placeholder", expectedQuery, resultQuery)
+	}
+
+	// 2. 嵌套占位符在 Path 部分（问号之前），使用 PathEscape
+	templatePath := "https://example.com/tags/{category.tag}/detail"
+	resultPath := buildLink(item, "", templatePath)
+	expectedPath := "https://example.com/tags/" + url.PathEscape("tech/news") + "/detail"
+	if resultPath != expectedPath {
+		t.Errorf("expected %q, got %q for PathEscape with nested placeholder", expectedPath, resultPath)
+	}
+}

@@ -1,58 +1,72 @@
-# NewsPocket 核心引擎与邮件模板重构实施计划
+# 邮件超时、JSON嵌套提取与GUI可调试性优化计划
 
-本计划旨在通过对 NewsPocket 数据抓取解析引擎及邮件模板进行重构，全面增强系统的稳定性、安全兼容性以及视觉展现质量。
+本实施计划旨在针对 NewsPocket 系统进行健壮性与易用性优化，包含以下三个核心提升：
+1. **SMTP 发送网络超时限制**：防止由于网络无响应导致主流程无限阻塞。
+2. **JSON API 嵌套路径与嵌套占位符解析**：支持子项中类似 `detail.title` 的点号路径提取，以及链接模板中 `{detail.id}` 的安全转义替换。
+3. **GUI 测试抓取调试可视化**：在有效新闻为 0 时返回精细化的诊断数据，输出第一条原始数据的关键字段解析，方便排查配置缺陷。
 
 ---
 
-## 1. 变更详情汇总 (Proposed Changes)
+## 用户评审要求
 
-为了实现已对齐的决策，我们将对以下模块和文件进行修改：
+> [!IMPORTANT]
+> 1. 本次对 `jsonapi.go` 的子字段提取方式由扁平查找（如 `item[key]`）升级为支持嵌套路径（`a.b.c`）。这是完全向后兼容的，因为当路径中没有点号时仍会回退到原有的扁平提取。
+> 2. `app.go` 对 `TestSource` 返回的数据格式进行了扩展，在没有有效条目时输出 Markdown 诊断文本而非仅仅空列表提示，这需要前端能正常渲染该 Markdown/字符串文本。
 
-### 🛠️ 数据抓取与解析模块 (fetcher)
+---
+
+## 开放性问题
+
+目前暂无未决定的开放性问题。
+
+---
+
+## 拟定变更说明
+
+### 1. 邮件网络层组件 (Mailer)
+
+#### [MODIFY] [mailer.go](file:///d:/4rchive/Code/NewsPocket/internal/mailer/mailer.go)
+* 修改 TCP 拨号和 TLS 建立连接的方式：
+  * 引入 `net.Dialer` 并将 `Timeout` 设置为 10 秒。
+  * 将 `tls.Dial` 修改为 `tls.DialWithDialer`。
+  * 将 `net.Dial` 修改为 `dialer.Dial`。
+
+---
+
+### 2. 新闻数据抓取与解析组件 (Fetcher)
 
 #### [MODIFY] [jsonapi.go](file:///d:/4rchive/Code/NewsPocket/internal/fetcher/jsonapi.go)
-* **时间戳解析增强 (`parseTimeString`)**：
-  * 新增对 13 位毫秒级 Unix 时间戳字符串/数值的安全识别与解析。
-  * 保持对 10 位秒级 Unix 时间戳的完美向后兼容。
-* **智能自动 URL 编码 (`buildLink`)**：
-  * 解析模板占位符 `{key}` 在 URL 中所处的位置：
-    * 若在问号 `?` 之后（Query 参数区），采用 `url.QueryEscape` 自动转义替换的值。
-    * 若在问号 `?` 之前（Path 路径区），采用 `url.PathEscape` 对特殊及中文字符进行安全转义，保留链接基础骨架。
-  * 用户无需修改现有的 `sources.json` 配置文件，实现零配置无感升级。
+* 重构 `getString`：
+  * 检测 `key` 中是否包含点号 `.`。如果包含，则调用 `getNestedValue` 进行逐级提取；否则沿用普通的 Map 字段提取。
+* 重构 `buildLink`：
+  * 支持提取 `linkTemplate` 中所有形如 `{...}` 的占位符（例如 `{detail.id}`）。
+  * 对每个占位符使用 `getNestedValue` 提取值，并根据其在模板中的位置（Path 还是 Query）智能进行 `url.PathEscape` 或 `url.QueryEscape` 转义。
 
 ---
 
-### 🎨 邮件渲染与表现模块 (renderer)
+### 3. Wails 桌面交互层 (GUI)
 
-#### [MODIFY] [renderer.go](file:///d:/4rchive/Code/NewsPocket/internal/renderer/renderer.go)
-* 配合邮件模板，支持统计数据的传入。
-* 修改 `TemplateData` 的字段，或通过模板内置方法对传入的新闻源及分类数据进行列表聚合，支持在无脚本（No-JS）环境下直接循环渲染来源占比进度条。
-
-#### [MODIFY] [email.gohtml](file:///d:/4rchive/Code/NewsPocket/internal/renderer/templates/email.gohtml)
-* **彻底去脚本化 (0 SPAM / 100% 兼容)**：
-  * 彻底移除底部的 Chart.js 外部 CDN 链接（`<script src="https://..."></script>`）以及所有内部 `<script>` 逻辑，消除邮件网关反垃圾过滤的拦截隐患。
-* **Cinematic Dusk 风格来源统计条 (Progress Bar List)**：
-  * 在邮件顶部（原 Canvas 区域）设计一套基于纯 HTML/CSS（`<table width="100%">`）配合 HSL / 霓虹渐变色的“来源抓取量进度条列表”。
-  * 采用 HSL 精修的深色背景（`#0d0d12`）与柔和的霓虹橙（`#ff6b4a` 到 `#f97316` 渐变）发光进度条。
-  * 完美支持自适应深色模式，并在支持 CSS 动画的邮件客户端（如 Apple Mail / iOS Mail）中提供微光淡入与平滑伸展微动画。
+#### [MODIFY] [app.go](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/app.go)
+* 重构 `TestSource` 返回逻辑：
+  * 如果 `len(items) == 0`，但 `len(result.Entries) > 0`（即抓取解析到了原始数据，但被时间过滤器排除掉了），构造多行诊断报告，提示可能是 `time_field` 解析或 24 小时过期问题，并输出第一条原始数据的标题、链接、解析时间以及原始字段值。
+  * 如果 `len(result.Entries) == 0`，提示可能 `items_path` 配置错误。
 
 ---
 
-## 2. 验证与测试计划 (Verification Plan)
+## 验证计划
 
-### 自动化单元测试 (Automated Tests)
-* **时间戳与 URL 编码测试**：
-  * 在 `internal/fetcher/jsonapi_test.go` 中，编写针对 13 位毫秒级时间戳解析的测试用例。
-  * 编写针对 Query 参数自动转义（含中文热搜词占位符）的测试用例。
-  * 执行命令：`go test ./...` 确保所有单元测试 100% 通过。
+### 自动化测试
+* 在 `jsonapi_test.go` 中新增测试用例：
+  * 验证子项嵌套字段读取（例如 `getString(item, "author.name")`）。
+  * 验证链接模板中嵌套占位符替换（例如 `buildLink` 替换 `{author.id}`）。
+* 运行以下命令确保所有测试 100% 通过：
+  ```powershell
+  go test ./internal/...
+  ```
 
-### 视觉与渲染手动校验 (Manual Verification)
-1. **本地测试模式构建**：
-   * 在终端运行：
-     ```bash
-     go build -o newspocket.exe ./cmd/newspocket
-     .\newspocket.exe --test
-     ```
-2. **输出预览**：
-   * 打开生成的 `output.html`，校验顶部的 **Cinematic Dusk 风格来源抓取占比进度条** 是否在不同屏幕尺寸下均能完美自适应。
-   * 分别在“浅色模式”与“系统深色模式”下，通过浏览器控制台模拟或手动切屏，确认其背景及霓虹线能柔和响应，没有排版变形或色彩突兀。
+### 手动验证
+* 在本地测试运行 CLI 并指定 `--test`，检查原有源抓取是否正常运行并输出 `output.html`：
+  ```powershell
+  go build -o newspocket.exe ./cmd/newspocket
+  .\newspocket.exe --test
+  ```

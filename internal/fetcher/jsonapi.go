@@ -129,21 +129,32 @@ func getNestedValue(data any, path string) any {
 	return current
 }
 
-// buildLink 构建条目链接，支持直接字段名或模板格式
+// buildLink 构建条目链接，支持直接字段名或模板格式（支持嵌套占位符如 {author.id}）
 func buildLink(item map[string]any, linkField, linkTemplate string) string {
 	if linkTemplate != "" {
-		// 模板格式: "https://example.com/{id}"
 		link := linkTemplate
 		queryIdx := strings.Index(linkTemplate, "?")
 		
-		for key, value := range item {
-			placeholder := "{" + key + "}"
-			placeholderIdx := strings.Index(linkTemplate, placeholder)
-			
-			if placeholderIdx != -1 {
+		// 提取所有形如 {xxx} 的占位符，包括点号嵌套路径
+		var placeholders []string
+		start := -1
+		for i, r := range linkTemplate {
+			if r == '{' {
+				start = i
+			} else if r == '}' && start != -1 {
+				placeholders = append(placeholders, linkTemplate[start:i+1])
+				start = -1
+			}
+		}
+
+		for _, placeholder := range placeholders {
+			path := placeholder[1 : len(placeholder)-1] // 移除两端花括号
+			value := getNestedValue(item, path)
+			if value != nil {
 				valStr := fmt.Sprintf("%v", value)
-				var escapedVal string
+				placeholderIdx := strings.Index(linkTemplate, placeholder)
 				
+				var escapedVal string
 				// 智能自动编码：当占位符在 Query 部分（问号之后），采用 QueryEscape；否则采用 PathEscape
 				if queryIdx != -1 && placeholderIdx > queryIdx {
 					escapedVal = url.QueryEscape(valStr)
@@ -164,10 +175,20 @@ func buildLink(item map[string]any, linkField, linkTemplate string) string {
 	return ""
 }
 
-// getString 安全地从 map 中获取字符串值
+// getString 安全地从 map 中获取字符串值，支持以点号 "." 分隔的嵌套路径（例如 "detail.title"）
 func getString(m map[string]any, key string) string {
-	v, ok := m[key]
-	if !ok || v == nil {
+	var v any
+	if strings.Contains(key, ".") {
+		v = getNestedValue(m, key)
+	} else {
+		var ok bool
+		v, ok = m[key]
+		if !ok {
+			return ""
+		}
+	}
+	
+	if v == nil {
 		return ""
 	}
 	switch val := v.(type) {

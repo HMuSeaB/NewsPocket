@@ -148,18 +148,60 @@ func (a *App) TestSource(sourceJson string) (string, error) {
 	p := parser.New(300, 24)
 	items := p.ParseAll([]fetcher.FetchResult{*result}, 15)
 
-	// 构造返回值，只取前 5 条作为预览
 	var previewBuilder strings.Builder
-	previewBuilder.WriteString(fmt.Sprintf("✅ 成功抓取！共获得 **%d** 条有效新闻。\n\n--- 预览前 5 条 ---\n\n", len(items)))
-
-	limit := 5
-	if len(items) < limit {
-		limit = len(items)
-	}
-
-	for i := 0; i < limit; i++ {
-		item := items[i]
-		previewBuilder.WriteString(fmt.Sprintf("%d. [%s]\n   %s (%s)\n\n", i+1, item.Title, item.Link, item.Time))
+	if len(items) > 0 {
+		limit := 5
+		if len(items) < limit {
+			limit = len(items)
+		}
+		previewBuilder.WriteString(fmt.Sprintf("✅ 成功抓取！共获得 **%d** 条有效新闻。\n\n--- 预览前 %d 条 ---\n\n", len(items), limit))
+		for i := 0; i < limit; i++ {
+			item := items[i]
+			previewBuilder.WriteString(fmt.Sprintf("%d. [%s]\n   %s (%s)\n\n", i+1, item.Title, item.Link, item.Time))
+		}
+	} else {
+		// 检查抓取到了多少条原始数据，用以排查过滤原因
+		rawCount := len(result.Entries)
+		if rawCount > 0 {
+			previewBuilder.WriteString(fmt.Sprintf("⚠️ 抓取成功，解析到 **%d** 条原始数据，但由于 24 小时时间过滤器或清洗规则，最终有效新闻为 **0** 条。\n\n", rawCount))
+			previewBuilder.WriteString("💡 **可能的原因**：\n")
+			previewBuilder.WriteString("1. 该源最近 24 小时内没有任何更新。\n")
+			previewBuilder.WriteString("2. `time_field` 字段解析出来的时间不匹配，或者格式未被识别，导致其被判断为过期。\n\n")
+			previewBuilder.WriteString("--- 📋 原始数据首条分析 ---\n\n")
+			
+			firstEntry := result.Entries[0]
+			previewBuilder.WriteString(fmt.Sprintf("* **标题 (Title)**: %s\n", firstEntry.Title))
+			previewBuilder.WriteString(fmt.Sprintf("* **链接 (Link)**: %s\n", firstEntry.Link))
+			
+			// 尝试输出原始的时间字段值
+			var rawTimeVal any
+			if src.JSONConfig != nil && src.JSONConfig.TimeField != "" {
+				keys := strings.Split(src.JSONConfig.TimeField, ".")
+				var curr any = firstEntry.RawData
+				for _, k := range keys {
+					if m, ok := curr.(map[string]any); ok {
+						curr = m[k]
+					} else {
+						curr = nil
+						break
+					}
+				}
+				rawTimeVal = curr
+			}
+			
+			previewBuilder.WriteString(fmt.Sprintf("* **时间字段 (TimeField 配置)**: `%s`\n", src.JSONConfig.TimeField))
+			previewBuilder.WriteString(fmt.Sprintf("* **提取到的原始时间值**: `%v`\n", rawTimeVal))
+			previewBuilder.WriteString(fmt.Sprintf("* **解析后的实际时间 (Go)**: `%s` (若为 0001-01-01 表示解析失败)\n", firstEntry.Published.Format("2006-01-02 15:04:05 MST")))
+		} else {
+			previewBuilder.WriteString("❌ 抓取完成，但解析到的条目数量为 **0**。\n\n")
+			previewBuilder.WriteString("💡 **建议排查**：\n")
+			if src.Type == "json_api" && src.JSONConfig != nil {
+				previewBuilder.WriteString(fmt.Sprintf("1. 确认接口返回的 JSON 中，在 `items_path` (`%s`) 对应位置确实存在有效数组列表。\n", src.JSONConfig.ItemsPath))
+				previewBuilder.WriteString(fmt.Sprintf("2. 确认 `title_field` (`%s`) 拼写及路径是否正确。\n", src.JSONConfig.TitleField))
+			} else {
+				previewBuilder.WriteString("1. 检查 RSS 源地址在浏览器中是否能正常访问并返回合法的 XML/RSS 数据。\n")
+			}
+		}
 	}
 
 	return previewBuilder.String(), nil
