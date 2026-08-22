@@ -5,8 +5,11 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"html"
 	"html/template"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
 )
@@ -22,7 +25,8 @@ type TemplateData struct {
 	SourceCount   int
 	CategoryCount int
 	Sections      []parser.CategorySection
-	SourceStats   []SourceStat // 新增：各来源抓取数量统计，用于纯 HTML/CSS 进度条绘制
+	SourceStats   []SourceStat   // 各来源抓取数量统计，用于纯 HTML/CSS 进度条绘制
+	AISummary     template.HTML  // AI 今日核心要闻 1 分钟速读（已渲染为安全 HTML）
 }
 
 // SourceStat 来源抓取量统计结构
@@ -39,6 +43,55 @@ type Renderer struct {
 // New 创建渲染器
 func New() *Renderer {
 	return &Renderer{}
+}
+
+var (
+	boldPattern   = regexp.MustCompile(`\*\*(.*?)\*\*`)
+	headerPattern = regexp.MustCompile(`^(\d+\.|\-|\*)\s*(.*)`)
+)
+
+// FormatAISummaryToHTML 将 Markdown 风格的 AI 要闻速览转换为适合邮件客户端的结构化 HTML
+func FormatAISummaryToHTML(raw string) template.HTML {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+
+	lines := strings.Split(raw, "\n")
+	var buf strings.Builder
+
+	buf.WriteString(`<div class="ai-digest-list">`)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		// 转义基础 HTML
+		safeLine := html.EscapeString(trimmed)
+
+		// 转换粗体 **text** -> <strong>text</strong>
+		safeLine = boldPattern.ReplaceAllString(safeLine, `<strong class="ai-highlight">$1</strong>`)
+
+		// 检查是否为带序号或列表符号的行
+		if match := headerPattern.FindStringSubmatch(safeLine); len(match) == 3 {
+			prefix := match[1]
+			content := match[2]
+			buf.WriteString(fmt.Sprintf(
+				`<div class="ai-digest-item">`+
+					`<div class="ai-item-bullet">%s</div>`+
+					`<div class="ai-item-content">%s</div>`+
+					`</div>`,
+				prefix, content,
+			))
+		} else {
+			buf.WriteString(fmt.Sprintf(`<div class="ai-digest-p">%s</div>`, safeLine))
+		}
+	}
+
+	buf.WriteString(`</div>`)
+
+	return template.HTML(buf.String())
 }
 
 // Render 渲染邮件模板
@@ -102,23 +155,23 @@ func categoryIcon(category string) template.HTML {
 	switch category {
 	case "行业动态":
 		return template.HTML(fmt.Sprintf(
-			`<td class="section-icon" width="36" height="36"><svg %s fill="#7c3aed"><path d="M3 21h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18V7H3v2zm0-6v2h18V3H3z"/></svg></td>`,
+			`<td class="section-icon" width="36" height="36"><svg %s fill="#ff6b4a"><path d="M3 21h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18V7H3v2zm0-6v2h18V3H3z"/></svg></td>`,
 			svgStyle))
 	case "全球热点":
 		return template.HTML(fmt.Sprintf(
-			`<td class="section-icon" width="36" height="36"><svg %s fill="#7c3aed"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></td>`,
+			`<td class="section-icon section-icon-cyan" width="36" height="36"><svg %s fill="#00f2ff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></td>`,
 			svgStyle))
 	case "科技生活":
 		return template.HTML(fmt.Sprintf(
-			`<td class="section-icon section-icon-orange" width="36" height="36"><svg %s fill="#ea580c"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></td>`,
+			`<td class="section-icon section-icon-orange" width="36" height="36"><svg %s fill="#ff8c00"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></td>`,
 			svgStyle))
 	case "社交热点":
 		return template.HTML(fmt.Sprintf(
-			`<td class="section-icon" width="36" height="36"><svg %s fill="#7c3aed"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg></td>`,
+			`<td class="section-icon section-icon-pink" width="36" height="36"><svg %s fill="#f4a0a0"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg></td>`,
 			svgStyle))
 	default:
 		return template.HTML(fmt.Sprintf(
-			`<td class="section-icon" width="36" height="36"><svg %s fill="#7c3aed"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/></svg></td>`,
+			`<td class="section-icon" width="36" height="36"><svg %s fill="#38bdf8"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/></svg></td>`,
 			svgStyle))
 	}
 }

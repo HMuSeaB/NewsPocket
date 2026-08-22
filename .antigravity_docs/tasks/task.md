@@ -1,26 +1,25 @@
-# NewsPocket 稳定性与调试功能优化任务看板
+# NewsPocket 核心功能升级任务看板 (AI 速览 · 邮件模板 · GUI 交互)
 
-本看板用于追踪网络超时防护、JSON API 嵌套字段读取以及 GUI 测试抓取精细化反馈的开发进度。
+本看板用于追踪 AI 每日要闻速览模块、Cinematic Dusk 邮件模板跨客户端优化以及 Wails GUI 桌面端体验增强的开发进度。
 
 ---
 
 ## 📋 任务状态清单
 
-- `[x]` 任务一：在 `internal/mailer/mailer.go` 中引入超时防护
-  - [x] 引入 `net.Dialer` 限制连接超时为 10 秒
-  - [x] 修改 `tls.Dial` 为 `tls.DialWithDialer`
-  - [x] 修改 `net.Dial` 为 `dialer.Dial`
-- `[x]` 任务二：在 `internal/fetcher/jsonapi.go` 中重构嵌套路径提取
-  - [x] 升级 `getString` 方法，检测并解析点号 `.` 嵌套路径（利用 `getNestedValue`）
-- `[x]` 任务三：在 `internal/fetcher/jsonapi.go` 中支持嵌套占位符模板替换
-  - [x] 升级 `buildLink` 方法，支持匹配并提取形如 `{author.id}` 的占位符列表
-  - [x] 通过 `getNestedValue` 安全获取嵌套属性，并根据其在超链接问号 `?` 之前还是之后自动进行 Path/Query 智能转义
-- `[x]` 任务四：在 `cmd/newspocket-gui/app.go` 中优化测试抓取的调试诊断
-  - [x] 升级 `TestSource` 方法，若有效新闻数为 0，检查原始抓取条目数
-  - [x] 若有原始数据但全被过滤，输出 24h 时间过滤诊断警告，并预览首条原始记录以利于核实 `time_field` 等配置
-  - [x] 若无原始数据，给出接口无数据或 `items_path` 错误的诊断提示
-- `[x]` 任务五：单元测试编写与自动校验
-  - [x] 在 `jsonapi_test.go` 中添加对嵌套属性读取和嵌套模板占位符转义的单元测试
-  - [x] 本地运行并确保所有单元测试 100% 通过
-- `[x]` 任务六：本地命令行编译及验证
-  - [x] 编译核心引擎并以测试模式运行，确保未破坏原有抓取功能
+- `[x]` 任务一：实现 AI 每日要闻速览模块 (`internal/ai`)
+  - [x] 编写 `internal/ai/ai.go`，实现轻量级 OpenAI/DeepSeek 协议客户端与 Prompt 构造
+  - [x] 编写 `internal/ai/ai_test.go`，覆盖正常生成、网络超时与无 Key 降级用例
+  - [x] 在 `cmd/newspocket/main.go` 中挂载 AI 要闻提炼流程
+- `[x]` 任务二：升级 Cinematic Dusk 邮件模板与排版兼容性
+  - [x] 在 `internal/renderer/renderer.go` 中支持 `AISummary` 字段与 Markdown-to-HTML 渲染
+  - [x] 在 `internal/renderer/templates/email.gohtml` 中新增 AI 速览霓虹卡片与客户端表格样式兼容优化
+  - [x] 编写 `internal/renderer/renderer_test.go` 单元测试
+- `[x]` 任务三：增强 Wails 桌面管理端 (OPML 导入导出与邮件预览)
+  - [x] 在 `cmd/newspocket-gui/app.go` 中实现 `ImportOPML`、`ExportOPML`、`PreviewEmail`
+  - [x] 在 `cmd/newspocket-gui/app_test.go` 中测试 OPML 导入、去重与导出
+  - [x] 在 `frontend/index.html` 中新增搜索框、OPML 导入导出按钮和邮件预览 iframe 弹窗
+  - [x] 在 `frontend/src/main.js` 中实现侧边栏一键启停开关、搜索过滤与预览联动
+  - [x] 在 `frontend/src/style.css` 中注入 Cinematic Dusk 暮光组件样式
+- `[x]` 任务四：全量测试与验证
+  - [x] 运行 `go test -v ./...` 确保 100% 通过
+  - [x] 运行 CLI 测试模式 `go run ./cmd/newspocket --test` 验证 `output.html` 渲染

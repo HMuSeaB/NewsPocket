@@ -3,12 +3,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"os"
 	"time"
 
+	"github.com/HMuSeaB/NewsPocket/internal/ai"
 	"github.com/HMuSeaB/NewsPocket/internal/config"
 	"github.com/HMuSeaB/NewsPocket/internal/fetcher"
 	"github.com/HMuSeaB/NewsPocket/internal/mailer"
@@ -81,7 +84,19 @@ func main() {
 		"categories", len(sections),
 	)
 
-	// 5. 渲染 + 发送
+	// 5. 可选 AI 要闻速览提炼
+	aiClient := ai.NewClient()
+	var aiSummaryHTML template.HTML
+	if aiClient.IsEnabled() {
+		aiDigest, aiErr := aiClient.GenerateDailyDigest(context.Background(), allItems)
+		if aiErr != nil {
+			slog.Warn("AI 速览生成失败，降级为普通晨报", "error", aiErr)
+		} else if aiDigest != "" {
+			aiSummaryHTML = renderer.FormatAISummaryToHTML(aiDigest)
+		}
+	}
+
+	// 6. 渲染 + 发送
 	beijing := time.FixedZone("CST", 8*3600)
 	today := time.Now().In(beijing).Format("2006年01月02日 Monday")
 
@@ -99,6 +114,7 @@ func main() {
 		SourceCount:   len(sourceSet),
 		CategoryCount: len(sections),
 		Sections:      sections,
+		AISummary:     aiSummaryHTML,
 	}
 
 	htmlContent, err := r.Render(data)

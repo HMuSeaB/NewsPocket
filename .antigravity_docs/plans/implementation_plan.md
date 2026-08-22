@@ -1,72 +1,142 @@
-# 邮件超时、JSON嵌套提取与GUI可调试性优化计划
+# NewsPocket 核心功能升级实施计划 (AI 速览 · 邮件模板 · GUI 交互)
 
-本实施计划旨在针对 NewsPocket 系统进行健壮性与易用性优化，包含以下三个核心提升：
-1. **SMTP 发送网络超时限制**：防止由于网络无响应导致主流程无限阻塞。
-2. **JSON API 嵌套路径与嵌套占位符解析**：支持子项中类似 `detail.title` 的点号路径提取，以及链接模板中 `{detail.id}` 的安全转义替换。
-3. **GUI 测试抓取调试可视化**：在有效新闻为 0 时返回精细化的诊断数据，输出第一条原始数据的关键字段解析，方便排查配置缺陷。
+本计划针对用户选定的三个核心维度（**2: AI 每日要闻速览模块**、**3: Cinematic Dusk 邮件模板排版与兼容性优化**、**4: Wails GUI 桌面端体验升级**）进行完整、健壮、模块化的工程实现。
 
 ---
 
-## 用户评审要求
+## 用户评审要求 (User Review Required)
 
 > [!IMPORTANT]
-> 1. 本次对 `jsonapi.go` 的子字段提取方式由扁平查找（如 `item[key]`）升级为支持嵌套路径（`a.b.c`）。这是完全向后兼容的，因为当路径中没有点号时仍会回退到原有的扁平提取。
-> 2. `app.go` 对 `TestSource` 返回的数据格式进行了扩展，在没有有效条目时输出 Markdown 诊断文本而非仅仅空列表提示，这需要前端能正常渲染该 Markdown/字符串文本。
+> 1. **零成本与完全向后兼容**：
+>    - **AI 速览模块**默认即插即用：未配置 `AI_API_KEY` 时自动静默降级，完全不破坏现有的零成本 GitHub Actions 推送和普通早报流程。
+>    - 支持标准的 OpenAI / DeepSeek / Moonshot / Ollama / 兼容接口，通过标准 `net/http` 发起调用，无需引入任何庞大的第三方 SDK。
+> 2. **OPML 批量导入安全机制**：
+>    - 导入 OPML 时自动根据源的 `URL` 进行去重，避免重复添加相同的 RSS 订阅源。
+> 3. **GUI 实时预览机制**：
+>    - 桌面端预览邮件直接在内存中抓取并调用 `renderer.Render`，在弹窗的 `<iframe>` 中渲染，不写磁盘也不发送真实邮件。
 
 ---
 
-## 开放性问题
+## 拟定变更说明 (Proposed Changes)
 
-目前暂无未决定的开放性问题。
+```mermaid
+graph TD
+    subgraph "1. AI 智能要闻层 (internal/ai)"
+        AIClient["ai.Client (支持 OpenAI/DeepSeek 协议)"]
+        DigestGen["GenerateDailyDigest (结构化速读总结)"]
+    end
+
+    subgraph "2. 渲染引擎层 (internal/renderer)"
+        EmailTemplate["templates/email.gohtml (Cinematic Dusk 霓虹暮光 + 客户端兼容)"]
+        RendererGo["renderer.go (注入 AISummary & 渲染逻辑)"]
+    end
+
+    subgraph "3. 桌面管理端 (cmd/newspocket-gui)"
+        AppGo["app.go (ImportOPML / ExportOPML / PreviewEmail)"]
+        FrontendHTML["index.html (搜索栏 / OPML 导入导出按钮 / 邮件预览弹窗)"]
+        FrontendJS["main.js (源一键启停 / 搜索过滤 / iframe 渲染)"]
+        FrontendCSS["style.css (Cinematic Dusk 暮光组件美化)"]
+    end
+
+    subgraph "4. 核心主入口 (cmd/newspocket)"
+        MainCLI["main.go (抓取 -> AI 提炼 -> 模板渲染)"]
+    end
+
+    DigestGen --> RendererGo
+    RendererGo --> EmailTemplate
+    EmailTemplate --> MainCLI
+    AppGo --> FrontendJS
+    FrontendJS --> FrontendHTML
+    FrontendCSS --> FrontendHTML
+```
 
 ---
 
-## 拟定变更说明
+### 1. AI 每日要闻速览模块
 
-### 1. 邮件网络层组件 (Mailer)
+#### [NEW] [ai.go](file:///d:/4rchive/Code/NewsPocket/internal/ai/ai.go)
+- 实现轻量级 `Client` 结构体：
+  - 从环境变量读取：`AI_API_KEY`、`AI_BASE_URL` (默认 `https://api.deepseek.com/v1`)、`AI_MODEL` (默认 `deepseek-chat`)、`AI_TIMEOUT` (默认 45 秒)。
+  - `GenerateDailyDigest(ctx context.Context, items []parser.NewsItem) (string, error)`：
+    - 精选前 25 条重点资讯的标题与摘要，组装严谨且有洞察力的 Prompt。
+    - 发送符合 OpenAI 规范的 JSON Payload (`/chat/completions`)。
+    - 针对 API 超时、鉴权失败或网络波动提供完整 Try-Catch 错误拦截与日志记录，失败时安全降级返回空字符串。
 
-#### [MODIFY] [mailer.go](file:///d:/4rchive/Code/NewsPocket/internal/mailer/mailer.go)
-* 修改 TCP 拨号和 TLS 建立连接的方式：
-  * 引入 `net.Dialer` 并将 `Timeout` 设置为 10 秒。
-  * 将 `tls.Dial` 修改为 `tls.DialWithDialer`。
-  * 将 `net.Dial` 修改为 `dialer.Dial`。
+#### [NEW] [ai_test.go](file:///d:/4rchive/Code/NewsPocket/internal/ai/ai_test.go)
+- 使用 `httptest.Server` 编写单元测试：
+  - 测试正常生成 AI 摘要解析；
+  - 测试当 API Key 为空或服务端返回 500/超时时的优雅降级与兜底行为。
+
+#### [MODIFY] [main.go](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket/main.go)
+- 在去重聚合和模板渲染之间增加 AI 速览步骤：
+  - 检查 AI 配置/环境变量；若启用则调用 `ai.NewClient().GenerateDailyDigest(...)`。
+  - 将生成的 Markdown 摘要传入 `renderer.TemplateData.AISummary`。
 
 ---
 
-### 2. 新闻数据抓取与解析组件 (Fetcher)
+### 2. 邮件模板与视觉排版升级 (Cinematic Dusk)
 
-#### [MODIFY] [jsonapi.go](file:///d:/4rchive/Code/NewsPocket/internal/fetcher/jsonapi.go)
-* 重构 `getString`：
-  * 检测 `key` 中是否包含点号 `.`。如果包含，则调用 `getNestedValue` 进行逐级提取；否则沿用普通的 Map 字段提取。
-* 重构 `buildLink`：
-  * 支持提取 `linkTemplate` 中所有形如 `{...}` 的占位符（例如 `{detail.id}`）。
-  * 对每个占位符使用 `getNestedValue` 提取值，并根据其在模板中的位置（Path 还是 Query）智能进行 `url.PathEscape` 或 `url.QueryEscape` 转义。
+#### [MODIFY] [renderer.go](file:///d:/4rchive/Code/NewsPocket/internal/renderer/renderer.go)
+- 在 `TemplateData` 结构体中新增 `AISummary template.HTML` 字段。
+- 增加简易 Markdown 转安全 HTML 的处理（或行内结构化渲染），使 AI 输出的要点、粗体和列表在邮件中完美显示。
+
+#### [MODIFY] [email.gohtml](file:///d:/4rchive/Code/NewsPocket/internal/renderer/templates/email.gohtml)
+- **AI 要闻速览卡片**：
+  - 在 Hero 区域和 Stats 栏下方新增「今日 AI 核心要闻速览」模块。
+  - 采用 **Cinematic Dusk** 暮光设计语言：深蓝渐变底色 (`#121829` / `#1a2a4a`)、霓虹暖橙日落光晕 (`#ff6b4a`) 标识点缀。
+- **邮件客户端兼容性强化**：
+  - 优化内联样式与表格结构，确保在 QQ 邮箱、网易 163 邮箱、Apple Mail 及 Outlook 中背景色和字体颜色对比度清晰，避免暗黑模式反转导致白字白底或黑字黑底。
+  - 优化进度条和卡片间距。
+
+#### [NEW] [renderer_test.go](file:///d:/4rchive/Code/NewsPocket/internal/renderer/renderer_test.go)
+- 编写模板渲染测试，确保包含/不包含 AI 摘要、各类分类图标及来源进度条均能 100% 正确渲染。
 
 ---
 
-### 3. Wails 桌面交互层 (GUI)
+### 3. Wails 桌面管理端体验增强 (GUI)
 
 #### [MODIFY] [app.go](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/app.go)
-* 重构 `TestSource` 返回逻辑：
-  * 如果 `len(items) == 0`，但 `len(result.Entries) > 0`（即抓取解析到了原始数据，但被时间过滤器排除掉了），构造多行诊断报告，提示可能是 `time_field` 解析或 24 小时过期问题，并输出第一条原始数据的标题、链接、解析时间以及原始字段值。
-  * 如果 `len(result.Entries) == 0`，提示可能 `items_path` 配置错误。
+- **OPML 导入与导出**：
+  - `ImportOPML(opmlContent string) (int, error)`：解析 OPML 1.0/2.0 XML 结构，提取 `<outline>` 中的 `xmlUrl`、`text/title`、`category` 等，批量转换为 `config.Source` 并根据 URL 去重合并至当前配置。
+  - `ExportOPML() (string, error)`：将当前启用的 RSS 源导出为标准 OPML 2.0 XML 字符串。
+- **邮件实时预览接口**：
+  - `PreviewEmail() (string, error)`：加载当前启用的源，在内存中执行抓取（支持超时限制与容错）、解析并使用 `renderer.Render` 输出完整 HTML 字符串供前端展示。
+
+#### [MODIFY] [index.html](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/index.html)
+- 侧边栏：
+  - 新增源搜索过滤输入框 `<input id="search-source" placeholder="🔍 搜索新闻源或分类...">`。
+- 顶部栏：
+  - 新增「📁 导入 OPML」、「📥 导出 OPML」、「📰 预览邮件」按钮。
+- 弹窗系统：
+  - 新增邮件预览全屏/大弹窗 `<div id="email-preview-modal">`，内嵌自适应 `<iframe id="email-preview-frame">` 与深色/浅色模式切换按钮。
+
+#### [MODIFY] [main.js](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/src/main.js)
+- 实现源列表快捷一键开关（直接在侧边栏点击 Checkbox 切换启用/禁用状态并自动同步）。
+- 实现列表实时关键字搜索过滤（按源名称、URL、分类）。
+- 实现 OPML 本地文件选取、解析及合并导入，展示导入成功的源数量提示。
+- 实现 OPML 导出并触发浏览器下载保存。
+- 实现邮件预览弹窗交互与 `iframe` 内容注入。
+
+#### [MODIFY] [style.css](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/src/style.css)
+- 添加搜索框、列表切换开关 (Toggle Switch)、OPML 按钮组以及邮件预览弹窗的 Cinematic Dusk 暮光霓虹设计样式。
 
 ---
 
-## 验证计划
+## 验证计划 (Verification Plan)
 
-### 自动化测试
-* 在 `jsonapi_test.go` 中新增测试用例：
-  * 验证子项嵌套字段读取（例如 `getString(item, "author.name")`）。
-  * 验证链接模板中嵌套占位符替换（例如 `buildLink` 替换 `{author.id}`）。
-* 运行以下命令确保所有测试 100% 通过：
+### 1. 自动化测试 (Automated Tests)
+- 运行完整的 Go 单元测试包，涵盖 `ai`、`fetcher`、`parser`、`renderer`、`mailer`：
   ```powershell
-  go test ./internal/...
+  go test -v ./internal/...
   ```
 
-### 手动验证
-* 在本地测试运行 CLI 并指定 `--test`，检查原有源抓取是否正常运行并输出 `output.html`：
+### 2. 手动与集成验证 (Manual Verification)
+- **CLI 核心引擎测试模式**：
   ```powershell
-  go build -o newspocket.exe ./cmd/newspocket
-  .\newspocket.exe --test
+  go run ./cmd/newspocket --test
   ```
+  检查生成的 `output.html`，验证：
+  - 邮件排版是否优雅呈现 Cinematic Dusk 暮光质感；
+  - 若配置了 `AI_API_KEY`，邮件顶部是否正确渲染「今日 AI 核心要闻速览」卡片；若未配置是否无缝正常显示。
+- **OPML 导入验证**：
+  - 在 GUI 或测试用例中导入项目自带的 `hn-popular-blogs-2025.opml`，确认 90+ 订阅源正确解析并合并入列表。
