@@ -13,6 +13,7 @@ import (
 
 	"github.com/HMuSeaB/NewsPocket/internal/config"
 	"github.com/HMuSeaB/NewsPocket/internal/fetcher"
+	"github.com/HMuSeaB/NewsPocket/internal/timeutil"
 )
 
 // NewsItem 最终输出的新闻条目
@@ -134,11 +135,7 @@ func (p *Parser) isRecent(t time.Time) bool {
 
 // formatTime 格式化时间为北京时间字符串
 func formatTime(t time.Time) string {
-	if t.IsZero() {
-		return "未知时间"
-	}
-	beijing := time.FixedZone("CST", 8*3600)
-	return t.In(beijing).Format("2006-01-02 15:04")
+	return timeutil.FormatBeijing(t)
 }
 
 // ParseAll 解析所有抓取结果，实现跨源全局去重，返回按时间排序的条目列表

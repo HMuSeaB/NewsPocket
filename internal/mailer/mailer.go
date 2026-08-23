@@ -70,10 +70,14 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 
-	// 构建邮件内容 (MIME)
+	// 构建邮件内容 (MIME)。
+	// Date 与 Message-ID 为 RFC 5322 必备头，缺失时部分服务商
+	// (QQ/Gmail 等) 会将邮件判定为垃圾邮件甚至直接拒收。
 	header := fmt.Sprintf("From: NewsPocket <%s>\r\n", cfg.User)
 	header += fmt.Sprintf("To: %s\r\n", strings.Join(cfg.Recipients, ","))
 	header += fmt.Sprintf("Subject: %s\r\n", encodeHeaderValue(subject))
+	header += fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z))
+	header += fmt.Sprintf("Message-ID: <%d@%s>\r\n", time.Now().UnixNano(), domainOf(cfg.User))
 	header += "MIME-Version: 1.0\r\n"
 	header += "Content-Type: text/html; charset=UTF-8\r\n"
 	header += "\r\n"
@@ -124,7 +128,10 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 	if err != nil {
 		return fmt.Errorf("SMTP 客户端创建失败: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		// Quit 未被调用时兜底关闭连接；已 Quit 后重复调用仅返回错误，无副作用
+		_ = client.Close()
+	}()
 
 	// 认证
 	auth := smtp.PlainAuth("", cfg.User, cfg.Password, cfg.Host)
@@ -156,8 +163,21 @@ func SendHTML(cfg *Config, subject, htmlContent string) error {
 		return fmt.Errorf("关闭数据流失败: %w", err)
 	}
 
+	// 显式发送 QUIT 结束会话，让服务端正常落盘投递
+	if err := client.Quit(); err != nil {
+		slog.Warn("SMTP QUIT 异常（邮件通常已发出）", "error", err)
+	}
+
 	slog.Info("邮件发送成功", "recipients", cfg.Recipients)
 	return nil
+}
+
+// domainOf 从邮箱地址中提取域名部分，用于构造 Message-ID；解析失败时回退到 localhost
+func domainOf(addr string) string {
+	if idx := strings.LastIndex(addr, "@"); idx >= 0 && idx < len(addr)-1 {
+		return addr[idx+1:]
+	}
+	return "localhost"
 }
 
 func encodeHeaderValue(value string) string {

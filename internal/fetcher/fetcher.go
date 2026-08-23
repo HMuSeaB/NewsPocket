@@ -9,6 +9,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -70,7 +72,9 @@ func applyHeaders(req *http.Request, custom map[string]string) {
 	}
 }
 
-// FetchAll 并发抓取所有启用的源
+// FetchAll 并发抓取所有启用的源。
+// 返回与传入源一一对应的结果列表：失败的源以 Err 字段标记失败原因，
+// 成功的源 Err 为 nil（即使条目数为 0）。
 func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 	if len(sources) == 0 {
 		slog.Warn("没有配置任何源")
@@ -82,7 +86,7 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 	var (
 		wg      sync.WaitGroup
 		mu      sync.Mutex
-		results []FetchResult
+		results = make([]FetchResult, 0, len(sources))
 	)
 
 	// 使用 Channel 信号量限制全局并发数，防止触发反爬或协程风暴
@@ -110,24 +114,30 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 				result, err = fetchRSS(ctx, s, f.client)
 			}
 
+			mu.Lock()
+			defer mu.Unlock()
+
 			if err != nil {
 				slog.Error("抓取失败", "source", s.Name, "error", err)
+				results = append(results, FetchResult{Source: s, Err: err})
 				return
 			}
-
-			if result != nil && len(result.Entries) > 0 {
-				mu.Lock()
-				results = append(results, *result)
-				mu.Unlock()
-			}
+			results = append(results, *result)
 		}(src)
 	}
 
 	wg.Wait()
 
+	failed := 0
+	for _, r := range results {
+		if r.Err != nil {
+			failed++
+		}
+	}
+
 	slog.Info("抓取完成",
-		"success", len(results),
-		"failed", len(sources)-len(results),
+		"success", len(results)-failed,
+		"failed", failed,
 	)
 
 	return results
@@ -170,27 +180,59 @@ func doRequestWithRetry(ctx context.Context, client *http.Client, source config.
 
 		resp, err = client.Do(req)
 
-		// 成功或明确的 4xx 错误则不再重试
-		if err == nil && resp.StatusCode < 500 {
+		// 成功、明确的 4xx 错误则不再重试；429 限流与 5xx 例外，需退避重试
+		if err == nil && resp.StatusCode < 500 && resp.StatusCode != http.StatusTooManyRequests {
 			return resp, nil
 		}
 
-		if resp != nil {
-			resp.Body.Close()
-		}
-
 		if i < maxRetries-1 {
-			slog.Warn("请求异常准备重试", "source", source.Name, "retry", i+1, "error", err)
+			if err != nil {
+				slog.Warn("请求异常准备重试", "source", source.Name, "retry", i+1, "error", err)
+			} else {
+				slog.Warn("请求返回异常状态码准备重试", "source", source.Name, "retry", i+1, "status", resp.Status)
+			}
+
+			// 429 时优先遵循服务端的 Retry-After 指示（封顶 30s）
+			delay := retryDelay(i)
+			if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
+				if ra := parseRetryAfter(resp.Header.Get("Retry-After")); ra > 0 {
+					delay = ra
+				}
+			}
+
+			if resp != nil {
+				resp.Body.Close()
+			}
+
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-time.After(retryDelay(i)): // 2s, 4s...
+			case <-time.After(delay):
 			}
+		} else if resp != nil {
+			resp.Body.Close()
 		}
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("经过 %d 次重试后失败: %w", maxRetries, err)
 	}
-	return nil, fmt.Errorf("经过 %d 次重试后仍然失败 (可能由于 5xx 状态码)", maxRetries)
+	return nil, fmt.Errorf("经过 %d 次重试后仍然失败 (可能由于 5xx 或 429 状态码)", maxRetries)
+}
+
+// parseRetryAfter 解析 Retry-After 响应头的秒数表示，非法或缺失返回 0
+func parseRetryAfter(value string) time.Duration {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	sec, err := strconv.Atoi(value)
+	if err != nil || sec <= 0 {
+		return 0
+	}
+	d := time.Duration(sec) * time.Second
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	return d
 }

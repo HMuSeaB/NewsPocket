@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/HMuSeaB/NewsPocket/internal/config"
+	"github.com/HMuSeaB/NewsPocket/internal/timeutil"
 )
 
 // fetchJSONAPI 抓取 JSON API 源
@@ -58,6 +60,9 @@ func fetchJSONAPI(ctx context.Context, source config.Source, client *http.Client
 		titleField = "title"
 	}
 
+	// 时间解析：无时区字符串按配置时区（默认北京时间）解析
+	timeLoc := timeutil.ResolveLocation(jc.TimeZone)
+
 	entries := make([]Entry, 0, len(items))
 	for _, raw := range items {
 		item, ok := raw.(map[string]any)
@@ -82,7 +87,7 @@ func fetchJSONAPI(ctx context.Context, source config.Source, client *http.Client
 		// 时间解析
 		var pubTime time.Time
 		if jc.TimeField != "" {
-			pubTime = parseTimeString(getString(item, jc.TimeField))
+			pubTime = parseTimeString(getString(item, jc.TimeField), timeLoc)
 		}
 
 		entries = append(entries, Entry{
@@ -201,44 +206,51 @@ func getString(m map[string]any, key string) string {
 	}
 }
 
-// parseTimeString 尝试多种格式解析时间字符串
-func parseTimeString(s string) time.Time {
+// parseTimeString 尝试多种格式解析时间字符串。
+// 带时区的格式按其自身时区解析；无时区的格式按 loc 指定时区解析
+// （中文源接口返回的本地时间多为北京时间）。
+func parseTimeString(s string, loc *time.Location) time.Time {
+	s = strings.TrimSpace(s)
 	if s == "" {
 		return time.Time{}
 	}
 
-	// 尝试 Unix 时间戳（秒）
-	if len(s) == 10 {
-		var ts int64
-		if _, err := fmt.Sscanf(s, "%d", &ts); err == nil && ts > 1000000000 {
+	// 尝试纯数字 Unix 时间戳：13 位毫秒 / 10 位秒
+	if ts, err := strconv.ParseInt(s, 10, 64); err == nil {
+		switch {
+		case len(s) >= 13 && ts > 1000000000000:
+			return time.UnixMilli(ts).UTC()
+		case len(s) == 10 && ts > 1000000000:
 			return time.Unix(ts, 0).UTC()
 		}
 	}
 
-	// 尝试 Unix 时间戳（毫秒）
-	if len(s) == 13 {
-		var ts int64
-		if _, err := fmt.Sscanf(s, "%d", &ts); err == nil && ts > 1000000000000 {
-			return time.UnixMilli(ts).UTC()
-		}
-	}
-
-	// 常见时间格式
+	// 常见带时区的时间格式（按字符串自身时区）
 	formats := []string{
+		time.RFC3339Nano, // 2006-01-02T15:04:05.999999999Z07:00，兼容带毫秒的 ISO8601
 		time.RFC3339,
 		time.RFC1123,
 		time.RFC1123Z,
-		"2006-01-02T15:04:05Z07:00",
-		"2006-01-02 15:04:05",
-		"2006-01-02T15:04:05",
-		"2006/01/02 15:04:05",
-		"2006-01-02",
 		"Mon, 02 Jan 2006 15:04:05 MST",
 		"Mon, 02 Jan 2006 15:04:05 -0700",
 	}
-
 	for _, f := range formats {
 		if t, err := time.Parse(f, s); err == nil {
+			return t.UTC()
+		}
+	}
+
+	// 无时区格式：按指定时区（默认北京时间）解析
+	localFormats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+		"2006/01/02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02",
+		"2006/01/02",
+	}
+	for _, f := range localFormats {
+		if t, err := time.ParseInLocation(f, s, loc); err == nil {
 			return t.UTC()
 		}
 	}

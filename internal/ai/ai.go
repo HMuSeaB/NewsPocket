@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HMuSeaB/NewsPocket/internal/config"
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
 )
 
@@ -30,8 +31,9 @@ type Config struct {
 
 // Client 大模型客户端
 type Client struct {
-	cfg    Config
-	client *http.Client
+	cfg      Config
+	client   *http.Client
+	disabled bool // settings.ai.enabled 显式停用标记
 }
 
 // DefaultSystemPrompt 默认系统 Prompt
@@ -45,13 +47,7 @@ const DefaultSystemPrompt = `你是一位专业、客观的新闻与行业趋势
 // LoadConfigFromEnv 从环境变量加载 AI 相关配置
 func LoadConfigFromEnv() Config {
 	apiKey := strings.TrimSpace(os.Getenv("AI_API_KEY"))
-	baseURL := strings.TrimSpace(os.Getenv("AI_BASE_URL"))
-	if baseURL == "" {
-		baseURL = "https://api.deepseek.com/v1"
-	}
-	// 规范化 BaseURL
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	baseURL = strings.TrimSuffix(baseURL, "/chat/completions")
+	baseURL := normalizeBaseURL(os.Getenv("AI_BASE_URL"))
 
 	model := strings.TrimSpace(os.Getenv("AI_MODEL"))
 	if model == "" {
@@ -87,9 +83,58 @@ func LoadConfigFromEnv() Config {
 	}
 }
 
-// NewClient 创建 AI 客户端实例
+// normalizeBaseURL 规范化 API BaseURL（去尾部斜杠与多余的 /chat/completions）
+func normalizeBaseURL(raw string) string {
+	baseURL := strings.TrimSpace(raw)
+	if baseURL == "" {
+		baseURL = "https://api.deepseek.com/v1"
+	}
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	return strings.TrimSuffix(baseURL, "/chat/completions")
+}
+
+// LoadConfigMerged 合并 sources.json 的 settings.ai 与环境变量生成最终配置。
+// 优先级：settings.ai 显式值 > 环境变量 > 内置默认值，
+// 因此 GitHub Actions 用户可以只配 Secrets，桌面 GUI 用户则直接写 JSON。
+func LoadConfigMerged(s *config.AISettings) Config {
+	cfg := LoadConfigFromEnv()
+	if s == nil {
+		return cfg
+	}
+
+	if s.APIKey != "" {
+		cfg.APIKey = strings.TrimSpace(s.APIKey)
+	}
+	if s.BaseURL != "" {
+		cfg.BaseURL = normalizeBaseURL(s.BaseURL)
+	}
+	if s.Model != "" {
+		cfg.Model = strings.TrimSpace(s.Model)
+	}
+	if s.Prompt != "" {
+		cfg.Prompt = strings.TrimSpace(s.Prompt)
+	}
+	if s.TimeoutSeconds > 0 {
+		cfg.Timeout = time.Duration(s.TimeoutSeconds) * time.Second
+	}
+	if s.MaxItems > 0 {
+		cfg.MaxItems = s.MaxItems
+	}
+
+	return cfg
+}
+
+// NewClient 创建 AI 客户端实例（仅读取环境变量配置）
 func NewClient() *Client {
 	return NewClientWithConfig(LoadConfigFromEnv())
+}
+
+// NewClientFromSettings 使用「sources.json settings.ai + 环境变量」合并配置创建客户端，
+// 并尊重 settings.ai 的 enabled 开关。CLI 与 GUI 均应使用此构造方式。
+func NewClientFromSettings(s *config.AISettings) *Client {
+	c := NewClientWithConfig(LoadConfigMerged(s))
+	c.disabled = !s.IsEnabled()
+	return c
 }
 
 // NewClientWithConfig 使用指定配置创建客户端
@@ -114,7 +159,7 @@ func NewClientWithConfig(cfg Config) *Client {
 
 // IsEnabled 检查 AI 模块是否已启用且配置了 APIKey
 func (c *Client) IsEnabled() bool {
-	return c.cfg.APIKey != ""
+	return !c.disabled && c.cfg.APIKey != ""
 }
 
 type chatMessage struct {

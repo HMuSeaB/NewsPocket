@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"html/template"
 	"log/slog"
 	"net/url"
 	"os"
@@ -15,9 +15,9 @@ import (
 
 	"github.com/HMuSeaB/NewsPocket/internal/ai"
 	"github.com/HMuSeaB/NewsPocket/internal/config"
+	"github.com/HMuSeaB/NewsPocket/internal/digest"
 	"github.com/HMuSeaB/NewsPocket/internal/fetcher"
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
-	"github.com/HMuSeaB/NewsPocket/internal/renderer"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -350,64 +350,31 @@ func (a *App) PreviewEmail() (string, error) {
 		return "", fmt.Errorf("解析配置失败: %w", err)
 	}
 
-	sources := cfg.EnabledSources()
-	if len(sources) == 0 {
-		return "<div style='padding:30px;text-align:center;color:#666;font-family:sans-serif;'><h3>⚠️ 暂无可用的已启用新闻源</h3><p>请至少启用一个新闻源后再预览。</p></div>", nil
-	}
-
-	// 并发抓取
-	f := fetcher.New(15 * time.Second)
-	results := f.FetchAll(sources)
-
-	if len(results) == 0 {
-		return "<div style='padding:30px;text-align:center;color:#666;font-family:sans-serif;'><h3>⚠️ 未抓取到任何内容</h3><p>请检查网络连接或源的配置有效性。</p></div>", nil
-	}
-
-	// 解析清洗
-	p := parser.New(cfg.Settings.SummaryMaxLength, cfg.Settings.HoursLookback)
-	allItems := p.ParseAll(results, cfg.Settings.MaxItemsPerSource)
-
-	if len(allItems) == 0 {
-		return "<div style='padding:30px;text-align:center;color:#666;font-family:sans-serif;'><h3>⚠️ 解析后无有效内容</h3><p>可能所有抓取到的内容都在设定时间窗口（如 24 小时）之外。</p></div>", nil
-	}
-
-	sections := parser.GroupByCategory(allItems, cfg.Sources)
-
-	sourceSet := make(map[string]struct{})
-	for _, item := range allItems {
-		sourceSet[item.Source] = struct{}{}
-	}
-
-	// 可选 AI 速览
-	var aiSummaryHTML template.HTML
-	aiClient := ai.NewClient()
-	if aiClient.IsEnabled() {
-		digest, err := aiClient.GenerateDailyDigest(context.Background(), allItems)
-		if err == nil && digest != "" {
-			aiSummaryHTML = renderer.FormatAISummaryToHTML(digest)
+	result, err := digest.Build(&cfg, ai.NewClientFromSettings(cfg.Settings.AI), digest.Options{
+		FetchTimeout: 15 * time.Second,
+		TitleSuffix:  " (实时预览)",
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, digest.ErrNoSources):
+			return previewNotice("暂无可用的已启用新闻源", "请至少启用一个新闻源后再预览。"), nil
+		case errors.Is(err, digest.ErrNoResults):
+			return previewNotice("未抓取到任何内容", "请检查网络连接或源的配置有效性。"), nil
+		case errors.Is(err, digest.ErrNoItems):
+			return previewNotice("解析后无有效内容", "可能所有抓取到的内容都在设定时间窗口（如 24 小时）之外。"), nil
+		default:
+			return "", fmt.Errorf("晨报生成失败: %w", err)
 		}
 	}
 
-	beijing := time.FixedZone("CST", 8*3600)
-	today := time.Now().In(beijing).Format("2006年01月02日 Monday")
+	return result.HTML, nil
+}
 
-	r := renderer.New()
-	data := renderer.TemplateData{
-		Title:         fmt.Sprintf("NewsPocket 晨报 - %s (实时预览)", today),
-		Date:          today,
-		TotalCount:    len(allItems),
-		SourceCount:   len(sourceSet),
-		CategoryCount: len(sections),
-		Sections:      sections,
-		AISummary:     aiSummaryHTML,
-	}
-
-	htmlContent, err := r.Render(data)
-	if err != nil {
-		return "", fmt.Errorf("模板渲染失败: %w", err)
-	}
-
-	return htmlContent, nil
+// previewNotice 生成预览弹窗内的居中提示卡片 HTML（无内容/异常时的降级展示）
+func previewNotice(title, detail string) string {
+	return fmt.Sprintf(
+		`<div style="padding:30px;text-align:center;color:#666;font-family:sans-serif;">`+
+			`<h3>⚠️ %s</h3><p>%s</p></div>`, title, detail)
 }
 
 // TestSource tests a single source and returns a preview of the fetched items

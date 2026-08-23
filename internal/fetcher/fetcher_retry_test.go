@@ -82,6 +82,38 @@ func TestDoRequestWithRetryDoesNotRetryClientErrors(t *testing.T) {
 	}
 }
 
+func TestDoRequestWithRetryRetriesRateLimit(t *testing.T) {
+	withNoRetryDelay(t)
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if requests == 1 {
+			// 不设置 Retry-After 时走默认退避（测试中已被置零）
+			http.Error(w, "slow down", http.StatusTooManyRequests)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+
+	resp, err := doRequestWithRetry(context.Background(), server.Client(), config.Source{
+		Name: "retry-429",
+		URL:  server.URL,
+	}, http.MethodGet)
+	if err != nil {
+		t.Fatalf("doRequestWithRetry returned error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if requests != 2 {
+		t.Fatalf("expected 2 requests, got %d", requests)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 response, got %d", resp.StatusCode)
+	}
+}
+
 func TestDoRequestWithRetryReplaysPostBody(t *testing.T) {
 	withNoRetryDelay(t)
 

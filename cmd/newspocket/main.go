@@ -3,20 +3,18 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/HMuSeaB/NewsPocket/internal/ai"
 	"github.com/HMuSeaB/NewsPocket/internal/config"
-	"github.com/HMuSeaB/NewsPocket/internal/fetcher"
+	"github.com/HMuSeaB/NewsPocket/internal/digest"
 	"github.com/HMuSeaB/NewsPocket/internal/mailer"
-	"github.com/HMuSeaB/NewsPocket/internal/parser"
-	"github.com/HMuSeaB/NewsPocket/internal/renderer"
+	"github.com/HMuSeaB/NewsPocket/internal/timeutil"
 )
 
 func main() {
@@ -40,106 +38,50 @@ func main() {
 		os.Exit(1)
 	}
 
-	sources := cfg.EnabledSources()
-	slog.Info("配置加载完成",
-		"total", len(cfg.Sources),
-		"enabled", len(sources),
-	)
-
-	if len(sources) == 0 {
-		slog.Warn("没有启用的源，程序结束")
-		os.Exit(0)
-	}
-
-	// 2. 并发抓取
-	f := fetcher.New(time.Duration(*timeout) * time.Second)
-	results := f.FetchAll(sources)
-
-	if len(results) == 0 {
-		slog.Warn("未抓取到任何内容，程序结束")
-		os.Exit(0)
-	}
-
-	// 3. 解析和清洗
-	p := parser.New(cfg.Settings.SummaryMaxLength, cfg.Settings.HoursLookback)
-	allItems := p.ParseAll(results, cfg.Settings.MaxItemsPerSource)
-
-	if len(allItems) == 0 {
-		slog.Warn("解析后无有效内容（可能所有内容都已过期），程序结束")
-		os.Exit(0)
-	}
-
-	// 4. 分组统计
-	sections := parser.GroupByCategory(allItems, cfg.Sources)
-
-	// 统计来源数
-	sourceSet := make(map[string]struct{})
-	for _, item := range allItems {
-		sourceSet[item.Source] = struct{}{}
-	}
-
-	slog.Info("统计信息",
-		"total", len(allItems),
-		"sources", len(sourceSet),
-		"categories", len(sections),
-	)
-
-	// 5. 可选 AI 要闻速览提炼
-	aiClient := ai.NewClient()
-	var aiSummaryHTML template.HTML
-	if aiClient.IsEnabled() {
-		aiDigest, aiErr := aiClient.GenerateDailyDigest(context.Background(), allItems)
-		if aiErr != nil {
-			slog.Warn("AI 速览生成失败，降级为普通晨报", "error", aiErr)
-		} else if aiDigest != "" {
-			aiSummaryHTML = renderer.FormatAISummaryToHTML(aiDigest)
-		}
-	}
-
-	// 6. 渲染 + 发送
-	beijing := time.FixedZone("CST", 8*3600)
-	today := time.Now().In(beijing).Format("2006年01月02日 Monday")
-
-	r := renderer.New()
-
+	// 2. 执行晨报生成全流程（抓取 → 解析 → 分组 → AI 速览 → 渲染）
 	titleSuffix := ""
 	if *testMode {
 		titleSuffix = " (测试)"
 	}
 
-	data := renderer.TemplateData{
-		Title:         fmt.Sprintf("NewsPocket 晨报 - %s%s", today, titleSuffix),
-		Date:          today,
-		TotalCount:    len(allItems),
-		SourceCount:   len(sourceSet),
-		CategoryCount: len(sections),
-		Sections:      sections,
-		AISummary:     aiSummaryHTML,
-	}
-
-	htmlContent, err := r.Render(data)
+	result, err := digest.Build(cfg, ai.NewClientFromSettings(cfg.Settings.AI), digest.Options{
+		FetchTimeout: time.Duration(*timeout) * time.Second,
+		TitleSuffix:  titleSuffix,
+	})
 	if err != nil {
-		slog.Error("模板渲染失败", "error", err)
+		// 无内容属于正常业务场景（如所有源恰好都无更新），不算故障
+		if errors.Is(err, digest.ErrNoSources) || errors.Is(err, digest.ErrNoResults) || errors.Is(err, digest.ErrNoItems) {
+			slog.Warn("流程提前结束", "reason", err)
+			os.Exit(0)
+		}
+		slog.Error("晨报生成失败", "error", err)
 		os.Exit(1)
 	}
 
+	for _, fs := range result.FailedSources {
+		slog.Warn("本次有源抓取失败", "source", fs.Name, "url", fs.URL, "reason", fs.Reason)
+	}
+
+	// 3. 输出：测试模式写文件 / 生产模式发邮件
 	if *testMode {
-		// 测试模式：输出到文件
-		if err := os.WriteFile("output.html", []byte(htmlContent), 0644); err != nil {
+		if err := os.WriteFile("output.html", []byte(result.HTML), 0644); err != nil {
 			slog.Error("写出测试文件失败", "error", err)
 			os.Exit(1)
 		}
-		slog.Info("测试文件已生成: output.html")
+		slog.Info("测试文件已生成: output.html",
+			"total", result.TotalCount,
+			"sources", result.SourceCount,
+			"failed_sources", len(result.FailedSources),
+		)
 	} else {
-		// 生产模式：发送邮件
 		mailCfg, err := mailer.LoadFromEnv()
 		if err != nil {
 			slog.Error("邮件配置错误", "error", err)
 			os.Exit(1)
 		}
 
-		subject := fmt.Sprintf("NewsPocket 每日简报 - %s", today)
-		if err := mailer.SendHTML(mailCfg, subject, htmlContent); err != nil {
+		subject := fmt.Sprintf("NewsPocket 每日简报 - %s", timeutil.TodayString())
+		if err := mailer.SendHTML(mailCfg, subject, result.HTML); err != nil {
 			slog.Error("邮件发送失败", "error", err)
 			os.Exit(1)
 		}

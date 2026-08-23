@@ -47,13 +47,43 @@ type JSONConfig struct {
 	LinkTemplate string `json:"link_template,omitempty"`
 	SummaryField string `json:"summary_field,omitempty"`
 	TimeField    string `json:"time_field,omitempty"`
+	// TimeZone 解析无时区时间字符串时使用的时区。
+	// 支持 IANA 名称 ("Asia/Shanghai") 或小时偏移 ("+8")；
+	// 缺省按北京时间 (UTC+8) 处理，适配中文源接口。
+	TimeZone string `json:"time_zone,omitempty"`
+}
+
+// AISettings 大模型「今日要闻速读」配置，位于 sources.json 的 settings.ai 节。
+// 所有字段均可留空 —— 留空时自动回退读取对应环境变量
+// (AI_API_KEY / AI_BASE_URL / AI_MODEL / AI_PROMPT / AI_TIMEOUT / AI_MAX_ITEMS)，
+// 因此 GitHub Actions 用户可以继续使用 Secrets 而无需改动此节。
+//
+// ⚠️ 若在公开仓库中使用，请勿将 api_key 写入本文件，应使用环境变量/Secrets 注入。
+type AISettings struct {
+	Enabled *bool `json:"enabled,omitempty"` // 显式 false 可整体停用 AI 模块；缺省视为 true
+
+	APIKey         string `json:"api_key,omitempty"`
+	BaseURL        string `json:"base_url,omitempty"`    // 兼容 OpenAI 协议，如 https://api.deepseek.com/v1
+	Model          string `json:"model,omitempty"`       // 如 deepseek-chat、gpt-4o-mini
+	Prompt         string `json:"prompt,omitempty"`      // 自定义系统提示词
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty"`
+	MaxItems       int    `json:"max_items,omitempty"`   // 送入大模型提炼的最大条目数
+}
+
+// IsEnabled 返回 AI 模块是否被显式停用。未设置时默认为 true。
+func (a *AISettings) IsEnabled() bool {
+	if a == nil || a.Enabled == nil {
+		return true
+	}
+	return *a.Enabled
 }
 
 // Settings 全局设置
 type Settings struct {
-	MaxItemsPerSource int `json:"max_items_per_source"`
-	HoursLookback     int `json:"hours_lookback"`
-	SummaryMaxLength  int `json:"summary_max_length"`
+	MaxItemsPerSource int         `json:"max_items_per_source"`
+	HoursLookback     int         `json:"hours_lookback"`
+	SummaryMaxLength  int         `json:"summary_max_length"`
+	AI                *AISettings `json:"ai,omitempty"`
 }
 
 // LoadConfig 从指定路径加载配置文件

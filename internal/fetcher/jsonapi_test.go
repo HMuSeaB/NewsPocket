@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/HMuSeaB/NewsPocket/internal/config"
+	"github.com/HMuSeaB/NewsPocket/internal/timeutil"
 )
 
 func TestFetchJSONAPIPreservesExplicitPostMethodWithoutBody(t *testing.T) {
@@ -51,24 +52,37 @@ func TestFetchJSONAPIPreservesExplicitPostMethodWithoutBody(t *testing.T) {
 
 func TestParseTimeStringSupportsMilliseconds(t *testing.T) {
 	// 13位毫秒时间戳测试 (2024-05-29 09:55:00 UTC)
-	msecTime := parseTimeString("1716976500000")
+	msecTime := parseTimeString("1716976500000", timeutil.Beijing)
 	expectedMsec := time.Date(2024, 5, 29, 9, 55, 0, 0, time.UTC)
 	if !msecTime.Equal(expectedMsec) {
 		t.Errorf("expected %v, got %v for milliseconds", expectedMsec, msecTime)
 	}
 
 	// 10位秒时间戳测试 (2024-05-29 09:55:00 UTC)
-	secTime := parseTimeString("1716976500")
+	secTime := parseTimeString("1716976500", timeutil.Beijing)
 	expectedSec := time.Date(2024, 5, 29, 9, 55, 0, 0, time.UTC)
 	if !secTime.Equal(expectedSec) {
 		t.Errorf("expected %v, got %v for seconds", expectedSec, secTime)
 	}
 
-	// 常见日期字符串测试
-	strTime := parseTimeString("2026-05-30 12:15:06")
-	expectedStr := time.Date(2026, 5, 30, 12, 15, 6, 0, time.UTC)
+	// 无时区日期字符串：按北京时间 (UTC+8) 解析
+	strTime := parseTimeString("2026-05-30 12:15:06", timeutil.Beijing)
+	expectedStr := time.Date(2026, 5, 30, 12, 15, 6, 0, timeutil.Beijing)
 	if !strTime.Equal(expectedStr) {
 		t.Errorf("expected %v, got %v for string format", expectedStr, strTime)
+	}
+
+	// 带毫秒的 ISO8601 字符串：按字符串自身时区解析
+	isoTime := parseTimeString("2026-05-30T12:15:06.500Z", timeutil.Beijing)
+	expectedISO := time.Date(2026, 5, 30, 12, 15, 6, 500000000, time.UTC)
+	if !isoTime.Equal(expectedISO) {
+		t.Errorf("expected %v, got %v for ISO8601 with milliseconds", expectedISO, isoTime)
+	}
+
+	// 自定义固定偏移时区 "+8" 与北京时间等价
+	customLoc := parseTimeString("2026-05-30 12:15:06", timeutil.ResolveLocation("+8"))
+	if !customLoc.Equal(expectedStr) {
+		t.Errorf("expected %v, got %v for custom offset timezone", expectedStr, customLoc)
 	}
 }
 
