@@ -36,7 +36,11 @@
    - `EMAIL_PASS`: 你的发件邮箱授权码 (不是登录密码！)
    - `EMAIL_TO`: 收件人邮箱，支持英文逗号分隔的多个邮箱 (如果不填则默认发送给 `EMAIL_USER`)
 
-   **AI 要闻速读（可选，不配则跳过此模块）：**
+   **⚡ Jev 智能精选与降噪（可选，推荐配置）：**
+   - `TYPESAFE_API_KEY`: TypeSafe API 密钥（配置后自动开启 Jev 毫秒级打分重排与水文过滤，零幻觉）
+   - `TYPESAFE_BASE_URL`: API 地址（可选，默认: `https://api.typesafe.ai/v1`）
+
+   **🤖 AI 要闻速读（可选，不配则跳过此模块）：**
    - `AI_API_KEY`: 大模型服务的 API Key (如 [DeepSeek](https://platform.deepseek.com/) 平台密钥)
    - `AI_BASE_URL`: API 地址 (默认: `https://api.deepseek.com/v1`)
    - `AI_MODEL`: 模型名 (默认: `deepseek-chat`)
@@ -72,7 +76,8 @@ go build -o newspocket ./cmd/newspocket
 # 生产运行（需配置环境变量）
 export EMAIL_USER="..."
 export EMAIL_PASS="..."
-export AI_API_KEY="sk-..."        # 可选，启用 AI 要闻速读
+export TYPESAFE_API_KEY="apikey_..." # 可选，启用 Jev 智能精选与重排序
+export AI_API_KEY="sk-..."           # 可选，启用 AI 要闻速读
 ./newspocket --config config/sources.json
 ```
 
