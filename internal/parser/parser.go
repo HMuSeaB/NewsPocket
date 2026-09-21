@@ -25,6 +25,8 @@ type NewsItem struct {
 	Link     string    `json:"link"`
 	Source   string    `json:"source"`
 	Category string    `json:"category"`
+	Score       float64   `json:"score,omitempty"`        // Jev 价值评分 (0~5)
+	JevCategory string    `json:"jev_category,omitempty"` // Jev 智能分类
 }
 
 // SourceGroup 按来源分组的新闻

@@ -91,6 +91,16 @@ func Build(cfg *config.Config, aiClient *ai.Client, opts Options) (*Result, erro
 		return nil, ErrNoItems
 	}
 
+	// 2.5 Jev 认知增强：智能打分、降噪与重排序 (若配置了 TYPESAFE_API_KEY)
+	jevClient := ai.NewJevClient("", "")
+	if jevClient.IsEnabled() {
+		reranker := ai.NewJevReranker(jevClient)
+		slog.Info("启用 Jev 认知重排序与降噪引擎", "raw_items", len(allItems))
+		if rankedItems, err := reranker.RerankAndFilter(context.Background(), allItems, 30, ""); err == nil && len(rankedItems) > 0 {
+			allItems = rankedItems
+		}
+	}
+
 	// 3. 分组统计
 	sections := parser.GroupByCategory(allItems, cfg.Sources)
 

@@ -15,6 +15,7 @@
 - **多源支持**:
   - 📡 **标准 RSS**: 支持所有标准 RSS/Atom 源。
   - 🔌 **JSON API**: 支持微博热搜、B站热门等 JSON 接口，可自定义路径和时间字段解析。
+- **⚡ Jev 智能精选与降噪** (新增): 基于 TypeSafe System One (Jev) 认知模型，运用 **Speculative Fan-out（推测式展开）** 并发对抓取的全量新闻进行毫秒级价值评分（Score）与领域分类（Choice），自动剔除低质营销水文，精准筛选 Top 精华，并可无缝推流至 Jev Decision Console 可视化中枢！
 - **🤖 AI 要闻速读** (可选): 兼容任意 OpenAI Chat Completions 协议 (DeepSeek / Moonshot / OpenAI / Ollama 等)，每日简报顶部自动附加大模型提炼的「今日核心要点 1 分钟速读」。
 - **桌面管理端**: 内置 Wails 跨平台 GUI，可视化增删改订阅源、一键测试抓取、实时预览晨报渲染效果。
 - **OPML 互通**: 一键从其他阅读器导入 OPML 订阅列表，或将现有 RSS 源导出为标准 OPML 2.0。

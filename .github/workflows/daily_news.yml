@@ -13,16 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout config
+    - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        sparse-checkout: |
-          config/
 
-    - name: Download NewsPocket binary
-      run: |
-        curl -sL "https://github.com/HMuSeaB/NewsPocket/releases/latest/download/newspocket-linux-amd64" -o newspocket
-        chmod +x newspocket
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+        cache: true
 
     - name: Run NewsPocket
       env:
@@ -31,6 +29,9 @@ jobs:
         EMAIL_USER: ${{ secrets.EMAIL_USER }}
         EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         EMAIL_TO: ${{ secrets.EMAIL_TO || secrets.EMAIL_USER }}
+        # 可选：配置后启用 TypeSafe Jev 认知重排序与智能降噪
+        TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        TYPESAFE_BASE_URL: ${{ secrets.TYPESAFE_BASE_URL }}
         # 可选：配置后每日简报顶部会附带大模型生成的「今日要闻速读」
         # 兼容任意 OpenAI Chat Completions 协议 (DeepSeek/Moonshot/OpenAI/Ollama 等)
         AI_API_KEY: ${{ secrets.AI_API_KEY }}
@@ -39,4 +40,4 @@ jobs:
         AI_PROMPT: ${{ secrets.AI_PROMPT }}
         AI_TIMEOUT: ${{ secrets.AI_TIMEOUT }}
         AI_MAX_ITEMS: ${{ secrets.AI_MAX_ITEMS }}
-      run: ./newspocket --config config/sources.json
+      run: go run ./cmd/newspocket --config config/sources.json
