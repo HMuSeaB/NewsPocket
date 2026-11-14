@@ -22,6 +22,14 @@ jobs:
         go-version: '1.22'
         cache: true
 
+    - name: Restore Deduplication History Cache
+      uses: actions/cache@v4
+      with:
+        path: cache/history.json
+        key: newspocket-history-${{ github.run_id }}
+        restore-keys: |
+          newspocket-history-
+
     - name: Run NewsPocket
       env:
         EMAIL_HOST: ${{ secrets.EMAIL_HOST || 'smtp.qq.com' }}
@@ -29,15 +37,21 @@ jobs:
         EMAIL_USER: ${{ secrets.EMAIL_USER }}
         EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         EMAIL_TO: ${{ secrets.EMAIL_TO || secrets.EMAIL_USER }}
+        # 可选：多渠道 Webhook 实时群推送
+        WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+        FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         # 可选：配置后启用 TypeSafe Jev 认知重排序与智能降噪
         TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         TYPESAFE_BASE_URL: ${{ secrets.TYPESAFE_BASE_URL }}
         # 可选：配置后每日简报顶部会附带大模型生成的「今日要闻速读」
-        # 兼容任意 OpenAI Chat Completions 协议 (DeepSeek/Moonshot/OpenAI/Ollama 等)
         AI_API_KEY: ${{ secrets.AI_API_KEY }}
         AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
         AI_MODEL: ${{ secrets.AI_MODEL }}
         AI_PROMPT: ${{ secrets.AI_PROMPT }}
         AI_TIMEOUT: ${{ secrets.AI_TIMEOUT }}
         AI_MAX_ITEMS: ${{ secrets.AI_MAX_ITEMS }}
-      run: go run ./cmd/newspocket --config config/sources.json
+      run: go run ./cmd/newspocket --config config/sources.json --history cache/history.json

@@ -1,25 +1,27 @@
-# NewsPocket 核心功能升级任务看板 (AI 速览 · 邮件模板 · GUI 交互)
+# 任务看板 (Task Board)
 
-本看板用于追踪 AI 每日要闻速览模块、Cinematic Dusk 邮件模板跨客户端优化以及 Wails GUI 桌面端体验增强的开发进度。
-
----
-
-## 📋 任务状态清单
-
-- `[x]` 任务一：实现 AI 每日要闻速览模块 (`internal/ai`)
-  - [x] 编写 `internal/ai/ai.go`，实现轻量级 OpenAI/DeepSeek 协议客户端与 Prompt 构造
-  - [x] 编写 `internal/ai/ai_test.go`，覆盖正常生成、网络超时与无 Key 降级用例
-  - [x] 在 `cmd/newspocket/main.go` 中挂载 AI 要闻提炼流程
-- `[x]` 任务二：升级 Cinematic Dusk 邮件模板与排版兼容性
-  - [x] 在 `internal/renderer/renderer.go` 中支持 `AISummary` 字段与 Markdown-to-HTML 渲染
-  - [x] 在 `internal/renderer/templates/email.gohtml` 中新增 AI 速览霓虹卡片与客户端表格样式兼容优化
-  - [x] 编写 `internal/renderer/renderer_test.go` 单元测试
-- `[x]` 任务三：增强 Wails 桌面管理端 (OPML 导入导出与邮件预览)
-  - [x] 在 `cmd/newspocket-gui/app.go` 中实现 `ImportOPML`、`ExportOPML`、`PreviewEmail`
-  - [x] 在 `cmd/newspocket-gui/app_test.go` 中测试 OPML 导入、去重与导出
-  - [x] 在 `frontend/index.html` 中新增搜索框、OPML 导入导出按钮和邮件预览 iframe 弹窗
-  - [x] 在 `frontend/src/main.js` 中实现侧边栏一键启停开关、搜索过滤与预览联动
-  - [x] 在 `frontend/src/style.css` 中注入 Cinematic Dusk 暮光组件样式
-- `[x]` 任务四：全量测试与验证
-  - [x] 运行 `go test -v ./...` 确保 100% 通过
-  - [x] 运行 CLI 测试模式 `go run ./cmd/newspocket --test` 验证 `output.html` 渲染
+- [x] 1. 实现 URL 深度清洗器 (`internal/parser/cleaner.go`) <!-- id: 1 -->
+  - [x] 编写参数清洗逻辑（剥离 `utm_*`, `spm`, `ref`, `from` 等）
+  - [x] 在 `internal/parser/parser.go` 挂载清洗
+  - [x] 编写并通过 `cleaner_test.go`
+- [x] 2. 实现优雅的 Markdown 渲染器 (`internal/renderer/markdown.go`) <!-- id: 2 -->
+  - [x] 结构化渲染 AI 摘要、统计卡片、分类板块、条目热度
+  - [x] 编写并通过 `markdown_test.go`
+- [x] 3. 实现轻量级多渠道推送器 (`internal/pusher`) <!-- id: 3 -->
+  - [x] 支持 Feishu/Lark、WeCom、DingTalk、Telegram、通用 Webhook
+  - [x] 支持环境变量与配置自动映射
+  - [x] 编写并通过 `pusher_test.go`
+- [x] 4. 实现轻量级跨日历史去重 (`internal/history`) <!-- id: 4 -->
+  - [x] 读写 `cache/history.json`，自动过期老化清理
+  - [x] 集成进 `internal/digest` 过滤管线
+  - [x] 编写并通过 `history_test.go`
+- [x] 5. 源抓取健康度看板与 CLI 体验升级 (`internal/digest` & `cmd/newspocket`) <!-- id: 5 -->
+  - [x] 统计各源抓取耗时、条数与状态
+  - [x] CLI 打印终端彩色/ASCII 汇总面板
+  - [x] 增加 `--output-md` 与 `--history` 命令行选项
+- [x] 6. 新增精选源预设模板库 (`config/presets/`) 与 更新文档 <!-- id: 6 -->
+  - [x] 创建 `config/presets/`（科技极客、AI精选、国内热点）
+  - [x] 更新 `README.md` 与 `.github/workflows/daily_news.yml`
+- [x] 7. 全量测试与端到端运行验证 <!-- id: 7 -->
+  - [x] `go test ./...` 全量通过
+  - [x] `go run ./cmd/newspocket --test --output-md output.md` 生成 HTML 与 Markdown并通过去重验证

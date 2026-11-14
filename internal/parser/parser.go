@@ -18,13 +18,13 @@ import (
 
 // NewsItem 最终输出的新闻条目
 type NewsItem struct {
-	Title    string    `json:"title"`
-	Time     string    `json:"time"` // 格式化后的时间字符串
-	TimeObj  time.Time `json:"-"`    // 原始时间，用于排序
-	Summary  string    `json:"summary"`
-	Link     string    `json:"link"`
-	Source   string    `json:"source"`
-	Category string    `json:"category"`
+	Title       string    `json:"title"`
+	Time        string    `json:"time"` // 格式化后的时间字符串
+	TimeObj     time.Time `json:"-"`    // 原始时间，用于排序
+	Summary     string    `json:"summary"`
+	Link        string    `json:"link"`
+	Source      string    `json:"source"`
+	Category    string    `json:"category"`
 	Score       float64   `json:"score,omitempty"`        // Jev 价值评分 (0~5)
 	JevCategory string    `json:"jev_category,omitempty"` // Jev 智能分类
 }
@@ -219,15 +219,16 @@ func (p *Parser) parseEntry(entry fetcher.Entry, source config.Source) *NewsItem
 	}
 
 	summary := p.TruncateSummary(p.CleanHTML(entry.Summary))
+	cleanLink := CleanURL(entry.Link)
 
 	return &NewsItem{
-		Title:    title,
-		Time:     formatTime(entry.Published),
-		TimeObj:  entry.Published,
-		Summary:  summary,
-		Link:     entry.Link,
-		Source:   source.Name,
-		Category: source.Category,
+		Title:       title,
+		Time:        formatTime(entry.Published),
+		TimeObj:     entry.Published,
+		Summary:     summary,
+		Link:        cleanLink,
+		Source:      source.Name,
+		Category:    source.Category,
 	}
 }
 

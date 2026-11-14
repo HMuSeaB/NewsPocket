@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "name": "Hacker News",
+      "url": "https://hnrss.org/frontpage",
+      "category": "全球极客",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "OpenAI Blog",
+      "url": "https://openai.com/news/rss.xml",
+      "category": "AI 领军机构",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "Hugging Face Blog",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "category": "开源生态",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "TechCrunch AI",
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "category": "行业投融资",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "The Verge AI",
+      "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "category": "全球极客",
+      "type": "rss",
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "max_items_per_source": 5,
+    "hours_lookback": 24,
+    "summary_max_length": 260
+  }
+}

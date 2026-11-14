@@ -1,4 +1,4 @@
-// Package digest 编排「并发抓取 → 解析清洗 → 分类分组 → AI 速览 → 模板渲染」
+// Package digest 编排「并发抓取 → 解析清洗 → 跨日去重 → 分类分组 → AI 速览 → 双模渲染(HTML/Markdown)」
 // 的完整晨报生成流程，供 CLI (cmd/newspocket) 与 GUI (cmd/newspocket-gui) 共用，
 // 避免两端各维护一份重复的主流程。
 package digest
@@ -14,6 +14,7 @@ import (
 	"github.com/HMuSeaB/NewsPocket/internal/ai"
 	"github.com/HMuSeaB/NewsPocket/internal/config"
 	"github.com/HMuSeaB/NewsPocket/internal/fetcher"
+	"github.com/HMuSeaB/NewsPocket/internal/history"
 	"github.com/HMuSeaB/NewsPocket/internal/parser"
 	"github.com/HMuSeaB/NewsPocket/internal/renderer"
 	"github.com/HMuSeaB/NewsPocket/internal/timeutil"
@@ -31,8 +32,9 @@ var (
 
 // Options 单次晨报生成的可调参数
 type Options struct {
-	FetchTimeout time.Duration // 单个源的抓取超时时间
-	TitleSuffix  string        // 邮件标题后缀，如 " (测试)"、" (实时预览)"
+	FetchTimeout time.Duration  // 单个源的抓取超时时间
+	TitleSuffix  string         // 邮件标题后缀，如 " (测试)"、" (实时预览)"
+	HistoryStore *history.Store // 可选跨日历史去重库
 }
 
 // FailedSource 抓取失败的源及其原因，用于向用户反馈
@@ -42,15 +44,26 @@ type FailedSource struct {
 	Reason string `json:"reason"`
 }
 
+// SourceReport 单个源的抓取健康度概览
+type SourceReport struct {
+	Name     string        `json:"name"`
+	URL      string        `json:"url"`
+	Duration time.Duration `json:"duration"`
+	Items    int           `json:"items"`
+	Error    string        `json:"error,omitempty"`
+}
+
 // Result 一次晨报生成的产物
 type Result struct {
 	HTML          string         // 渲染完成的完整邮件 HTML
+	Markdown      string         // 渲染完成的完整 Markdown 晨报
 	Title         string         // 邮件标题
 	TotalCount    int            // 有效新闻总条数
 	SourceCount   int            // 贡献内容的来源数
 	CategoryCount int            // 分类板块数
 	AIDigest      string         // AI 生成的原始 Markdown 速览（未启用或失败时为空）
 	FailedSources []FailedSource // 本次抓取失败的源清单
+	SourceReports []SourceReport // 每个源的健康度和抓取执行报告
 }
 
 // Build 执行完整的晨报生成流程。
@@ -71,15 +84,27 @@ func Build(cfg *config.Config, aiClient *ai.Client, opts Options) (*Result, erro
 	results := fetcher.New(opts.FetchTimeout).FetchAll(sources)
 
 	var failedSources []FailedSource
+	var sourceReports []SourceReport
+
 	for _, r := range results {
+		report := SourceReport{
+			Name:     r.Source.Name,
+			URL:      r.Source.URL,
+			Duration: r.Duration,
+			Items:    len(r.Entries),
+		}
+
 		if r.Err != nil {
+			report.Error = r.Err.Error()
 			failedSources = append(failedSources, FailedSource{
 				Name:   r.Source.Name,
 				URL:    r.Source.URL,
 				Reason: r.Err.Error(),
 			})
 		}
+		sourceReports = append(sourceReports, report)
 	}
+
 	if len(results) == len(failedSources) && len(failedSources) > 0 {
 		return nil, fmt.Errorf("%w: 全部 %d 个源均失败", ErrNoResults, len(failedSources))
 	}
@@ -89,6 +114,17 @@ func Build(cfg *config.Config, aiClient *ai.Client, opts Options) (*Result, erro
 	allItems := p.ParseAll(results, cfg.Settings.MaxItemsPerSource)
 	if len(allItems) == 0 {
 		return nil, ErrNoItems
+	}
+
+	// 2.3 跨日持久化去重 (若配置了 HistoryStore)
+	if opts.HistoryStore != nil {
+		freshItems, skipped := opts.HistoryStore.FilterUnseen(allItems)
+		slog.Info("跨日历史去重完成", "original", len(allItems), "skipped", skipped, "fresh", len(freshItems))
+		if len(freshItems) > 0 {
+			allItems = freshItems
+		} else {
+			slog.Warn("经跨日去重后无全新条目，保留精选条目避免空晨报")
+		}
 	}
 
 	// 2.5 Jev 认知增强：智能打分、降噪与重排序 (若配置了 TYPESAFE_API_KEY)
@@ -133,7 +169,7 @@ func Build(cfg *config.Config, aiClient *ai.Client, opts Options) (*Result, erro
 	today := timeutil.TodayString()
 	title := fmt.Sprintf("NewsPocket 晨报 - %s%s", today, opts.TitleSuffix)
 
-	htmlContent, err := renderer.New().Render(renderer.TemplateData{
+	tmplData := renderer.TemplateData{
 		Title:         title,
 		Date:          today,
 		TotalCount:    len(allItems),
@@ -141,18 +177,34 @@ func Build(cfg *config.Config, aiClient *ai.Client, opts Options) (*Result, erro
 		CategoryCount: len(sections),
 		Sections:      sections,
 		AISummary:     aiSummaryHTML,
-	})
+	}
+
+	rnd := renderer.New()
+	htmlContent, err := rnd.Render(tmplData)
 	if err != nil {
 		return nil, fmt.Errorf("模板渲染失败: %w", err)
 	}
 
+	// 生成 Markdown 格式
+	markdownContent := rnd.RenderMarkdown(tmplData, aiDigest)
+
+	// 6. 若启用了 HistoryStore，将最终推送的条目记录持久化
+	if opts.HistoryStore != nil && len(allItems) > 0 {
+		opts.HistoryStore.RecordItems(allItems)
+		if err := opts.HistoryStore.Save(); err != nil {
+			slog.Warn("保存历史去重记录失败", "error", err)
+		}
+	}
+
 	return &Result{
 		HTML:          htmlContent,
+		Markdown:      markdownContent,
 		Title:         title,
 		TotalCount:    len(allItems),
 		SourceCount:   len(sourceSet),
 		CategoryCount: len(sections),
 		AIDigest:      aiDigest,
 		FailedSources: failedSources,
+		SourceReports: sourceReports,
 	}, nil
 }

@@ -1,0 +1,55 @@
+{
+  "sources": [
+    {
+      "name": "少数派",
+      "url": "https://sspai.com/feed",
+      "category": "科技生活",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "爱范儿",
+      "url": "https://www.ifanr.com/feed",
+      "category": "科技生活",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "The Verge",
+      "url": "https://www.theverge.com/rss/index.xml",
+      "category": "全球前沿",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com/feed/",
+      "category": "全球前沿",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "IT之家",
+      "url": "https://api.ithome.com/json/newslist/news",
+      "category": "科技生活",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.ithome.com"
+      },
+      "json_config": {
+        "items_path": "newslist",
+        "title_field": "title",
+        "link_field": "url",
+        "summary_field": "description",
+        "time_field": "postdate"
+      }
+    }
+  ],
+  "settings": {
+    "max_items_per_source": 5,
+    "hours_lookback": 24,
+    "summary_max_length": 200
+  }
+}

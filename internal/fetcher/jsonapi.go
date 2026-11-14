@@ -77,6 +77,18 @@ func fetchJSONAPI(ctx context.Context, source config.Source, client *http.Client
 
 		// 构建链接
 		link := buildLink(item, jc.LinkField, jc.LinkTemplate)
+		if strings.HasPrefix(link, "/") {
+			base := ""
+			if source.Headers != nil {
+				base = source.Headers["Referer"]
+			}
+			if base == "" {
+				base = source.URL
+			}
+			if u, err := url.Parse(base); err == nil && u.Scheme != "" && u.Host != "" {
+				link = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, link)
+			}
+		}
 
 		// 摘要
 		summary := ""

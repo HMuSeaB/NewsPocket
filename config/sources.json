@@ -74,6 +74,7 @@
       "enabled": true,
       "headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.ithome.com",
         "Referer": "https://www.bilibili.com"
       },
       "json_config": {
@@ -92,7 +93,8 @@
       "type": "json_api",
       "enabled": true,
       "headers": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.ithome.com"
       },
       "json_config": {
         "items_path": "newslist",

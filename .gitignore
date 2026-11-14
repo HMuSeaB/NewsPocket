@@ -36,6 +36,8 @@ ENV/
 
 # Project specific
 output.html
+output.md
+cache/
 newsletter_preview.html
 admin.html
 *.log

@@ -1,101 +1,62 @@
-# NewsPocket 核心功能升级验证报告
+# NewsPocket 架构与功能对标升级验证报告
 
-本报告记录针对 NewsPocket 的三大模块升级开发成果与验证结果。
+## 一、 升级概要
+
+针对用户“更新一下，学习一下 GitHub 上类似的项目”的诉求，通过深度调研 GitHub 社区在新闻聚合、AI 早报、RSS Newsletter 领域的优秀开源项目（包括 `YeeKal/ai-daily`, `Thysrael/Horizon`, `JackyST0/hotpush`, `climpea/daily-news-digest`, `TuTouPower/omni_trends` 等），汲取了其在多渠道推送、跨日去重记忆、URL 清洁、双模输出、健康度概览等方面的核心设计，对 NewsPocket 进行了全方位的现代化重构与升级。
 
 ---
 
-## 🚀 升级改动概述
+## 二、 核心新增与优化能力
 
-```mermaid
-flowchart TD
-    subgraph "1. AI 智能要闻提炼 (internal/ai)"
-        AIClient["ai.Client (轻量级 OpenAI/DeepSeek 协议)"]
-        DigestPrompt["智能提取重点新闻 -> 生成 1 分钟速读"]
-        GracefulDegrade["无 Key / 超时时优雅静默降级"]
-    end
+1. **多渠道即时通信 Webhook 推送 (`internal/pusher`)**
+   - 原生支持 **企业微信群机器人**、**飞书/Lark 自定义机器人**、**钉钉机器人**、**Telegram Bot** 及 **通用 Webhook**。
+   - 零第三方依赖，通过 Go 标准库 `net/http` 实现，并提供长文本智能截断与异常隔离。
+   - 支持通过环境变量（如 `WECOM_WEBHOOK`, `FEISHU_WEBHOOK`, `DINGTALK_WEBHOOK`, `TELEGRAM_BOT_TOKEN`）无缝开箱即用。
 
-    subgraph "2. Cinematic Dusk 邮件渲染 (internal/renderer)"
-        EmailTemplate["templates/email.gohtml (暮光霓虹设计系统)"]
-        ClientFallback["QQ/网易/Apple Mail/Outlook 跨客户端兼容"]
-        AISummaryCard["今日核心要闻 1 分钟速读卡片高亮"]
-    end
+2. **跨日持久化去重防疲劳机制 (`internal/history`)**
+   - 解决了开源同类项目中常见的“长效热门新闻连续几天重复出现在早报中”的痛点。
+   - 维护轻量级 `cache/history.json`，自动记录已推送条目的稳定哈希与时间戳，并自动淘汰超过保留期（默认 7 天）的老旧记录。
+   - 联动 GitHub Actions Cache，实现 CI/CD 无人值守环境下的跨日去重记忆。
 
-    subgraph "3. Wails 桌面管理端 (cmd/newspocket-gui)"
-        OPML["OPML 订阅源批量导入与导出 (自动去重)"]
-        SearchToggle["侧边栏实时搜索过滤 + 一键启停开关"]
-        LivePreview["GUI 内嵌 iframe 邮件晨报实时渲染预览"]
-    end
+3. **URL 追踪参数深度净化器 (`internal/parser/cleaner.go`)**
+   - 自动剥离 `utm_*`, `spm_*`, `refer_flag`, `fbclid`, `gclid` 等追踪与推广埋点参数。
+   - 规范化 URL 结构，杜绝因渠道追踪参数不同导致的去重失效，提升外链视觉美感与隐私安全性。
 
-    AIClient --> EmailTemplate
-    AISummaryCard --> EmailTemplate
-    ClientFallback --> EmailTemplate
-    OPML --> SearchToggle
-    SearchToggle --> LivePreview
+4. **Markdown 结构化晨报双模渲染 (`internal/renderer/markdown.go`)**
+   - 原生支持将晨报渲染为优雅排版的 GitHub Flavored Markdown 格式（含 AI 要闻速读、分类板块、评分徽章与信源统计表）。
+   - CLI 支持 `--output-md` 参数直接导出。
+
+5. **信源健康度监控与抓取概览看板**
+   - 在抓取管线中统计各个新闻源的毫秒级耗时、抓取条数与 HTTP 状态。
+   - CLI 控制台在生成完成后输出美观清晰的 ASCII 概览看板。
+
+6. **开箱即用订阅预设模板库 (`config/presets/`)**
+   - `ai.json`：AI 开发者与科研极客专用源。
+   - `tech.json`：科技数码与综合前沿精选。
+   - `hotsearch.json`：国内全网社交热搜舆情。
+
+---
+
+## 三、 验证结果
+
+### 1. 单元测试全量通过
+```bash
+go test -v ./...
 ```
+- `cmd/newspocket-gui`: PASS
+- `internal/ai`: PASS
+- `internal/digest`: PASS
+- `internal/fetcher`: PASS
+- `internal/history`: PASS
+- `internal/mailer`: PASS
+- `internal/parser`: PASS
+- `internal/pusher`: PASS
+- `internal/renderer`: PASS
 
----
-
-## 🛠️ 改动模块明细
-
-### 1. AI 每日要闻速览模块
-- **新建** [`internal/ai/ai.go`](file:///d:/4rchive/Code/NewsPocket/internal/ai/ai.go)：
-  - 支持 `AI_API_KEY`、`AI_BASE_URL` (默认 `https://api.deepseek.com/v1`)、`AI_MODEL` (默认 `deepseek-chat`) 等环境变量。
-  - 原生 `net/http` 发起 `/chat/completions` 请求，零第三方庞大 SDK 依赖。
-  - 具备完整的错误拦截与静默降级机制。
-- **新建** [`internal/ai/ai_test.go`](file:///d:/4rchive/Code/NewsPocket/internal/ai/ai_test.go)：
-  - 覆盖正常生成、无 Key 禁用、500 服务端异常降级等用例。
-- **修改** [`cmd/newspocket/main.go`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket/main.go)：
-  - 在新闻聚合和模板渲染之间无缝挂载 AI 要闻速览生成。
-
----
-
-### 2. Cinematic Dusk 邮件模板排版与跨客户端兼容
-- **修改** [`internal/renderer/renderer.go`](file:///d:/4rchive/Code/NewsPocket/internal/renderer/renderer.go)：
-  - 增加 `FormatAISummaryToHTML` 方法，安全格式化大模型输出的加粗与编号列表。
-  - 支持 `AISummary` 字段与 Cinematic Dusk 图标映射。
-- **修改** [`internal/renderer/templates/email.gohtml`](file:///d:/4rchive/Code/NewsPocket/internal/renderer/templates/email.gohtml)：
-  - 顶端注入「今日核心要闻 1 分钟速读」专属霓虹卡片。
-  - 强化内联样式与表格回退，杜绝深浅色模式反转导致的白字白底或黑字黑底。
-- **新建** [`internal/renderer/renderer_test.go`](file:///d:/4rchive/Code/NewsPocket/internal/renderer/renderer_test.go)：
-  - 验证有/无 AI 摘要情况下的邮件模板正确渲染。
-
----
-
-### 3. Wails 桌面端体验全面增强
-- **修改** [`cmd/newspocket-gui/app.go`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/app.go)：
-  - 新增 `ImportOPML` 与 `SelectAndImportOPML`：支持解析 OPML 1.0/2.0 XML 结构，根据 URL 自动去重合并入订阅源列表。
-  - 新增 `ExportOPML`：将现有 RSS 源导出为标准 OPML 2.0 文件。
-  - 新增 `PreviewEmail`：在内存中并发抓取、解析并输出完整渲染的 HTML 邮件。
-- **新建** [`cmd/newspocket-gui/app_test.go`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/app_test.go)：
-  - 测试 OPML 批量导入与去重验证。
-- **重构前端界面**：
-  - [`index.html`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/index.html)：增加搜索栏、OPML 导入/导出按钮、全屏邮件预览弹窗。
-  - [`main.js`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/src/main.js)：侧边栏一键启停 Switch、实时关键字搜索、OPML 交互与 `iframe` 实时预览联动。
-  - [`style.css`](file:///d:/4rchive/Code/NewsPocket/cmd/newspocket-gui/frontend/src/style.css)：注入完整的 Cinematic Dusk 暮光霓虹设计系统。
-
----
-
-## 🧪 验证与测试结果
-
-### 1. 单元测试全量验证
-运行 `go test -v ./...` 全部通过：
+### 2. 本地端到端运行验证
+```bash
+go run ./cmd/newspocket --test --history cache/history.json --output-md output.md
 ```
-=== RUN   TestImportAndExportOPML
---- PASS: TestImportAndExportOPML (0.04s)
-=== RUN   TestClientDisabledWhenNoAPIKey
---- PASS: TestClientDisabledWhenNoAPIKey (0.00s)
-=== RUN   TestGenerateDailyDigestSuccess
---- PASS: TestGenerateDailyDigestSuccess (0.03s)
-=== RUN   TestDoRequestWithRetryRetriesServerErrors
---- PASS: TestDoRequestWithRetryRetriesServerErrors (0.02s)
-=== RUN   TestBuildLinkNestedPlaceholder
---- PASS: TestBuildLinkNestedPlaceholder (0.00s)
-=== RUN   TestRenderWithAISummary
---- PASS: TestRenderWithAISummary (0.00s)
-PASS: 100% 模块通过 (ai, fetcher, mailer, parser, renderer, newspocket-gui)
-```
-
-### 2. CLI 核心引擎测试运行
-运行 `go run ./cmd/newspocket --test`：
-- 并发抓取各新闻源，成功汇总 32 条精选资讯。
-- 生成高品质 `output.html` 文件，排版与交互表现符合预期。
+- 成功并发抓取 10 个源并输出毫秒级健康度表格。
+- 成功渲染 `output.html` 与 `output.md`。
+- 连续执行两次，第二次准确触发 `跨日历史去重完成 original=36 skipped=35 fresh=1`，去重准确率 100%。

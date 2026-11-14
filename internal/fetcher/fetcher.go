@@ -32,6 +32,7 @@ type FetchResult struct {
 	Source    config.Source
 	Entries   []Entry
 	FetchedAt time.Time
+	Duration  time.Duration
 	Err       error
 }
 
@@ -100,6 +101,7 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 			defer wg.Done()
 			defer func() { <-sem }() // 释放信号量
 
+			start := time.Now()
 			ctx, cancel := context.WithTimeout(context.Background(), f.timeout)
 			defer cancel()
 
@@ -114,14 +116,17 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 				result, err = fetchRSS(ctx, s, f.client)
 			}
 
+			dur := time.Since(start)
+
 			mu.Lock()
 			defer mu.Unlock()
 
 			if err != nil {
-				slog.Error("抓取失败", "source", s.Name, "error", err)
-				results = append(results, FetchResult{Source: s, Err: err})
+				slog.Error("抓取失败", "source", s.Name, "duration", dur, "error", err)
+				results = append(results, FetchResult{Source: s, Duration: dur, Err: err})
 				return
 			}
+			result.Duration = dur
 			results = append(results, *result)
 		}(src)
 	}
@@ -145,15 +150,22 @@ func (f *Fetcher) FetchAll(sources []config.Source) []FetchResult {
 
 // FetchSingle 抓取单个源（GUI 测试用）
 func (f *Fetcher) FetchSingle(source config.Source) (*FetchResult, error) {
+	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), f.timeout)
 	defer cancel()
 
+	var res *FetchResult
+	var err error
 	switch source.Type {
 	case "json_api":
-		return fetchJSONAPI(ctx, source, f.client)
+		res, err = fetchJSONAPI(ctx, source, f.client)
 	default:
-		return fetchRSS(ctx, source, f.client)
+		res, err = fetchRSS(ctx, source, f.client)
 	}
+	if res != nil {
+		res.Duration = time.Since(start)
+	}
+	return res, err
 }
 
 // doRequestWithRetry 包装 HTTP 请求，提供指数退避的自动重试机制

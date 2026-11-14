@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "name": "微博热搜",
+      "url": "https://weibo.com/ajax/side/hotSearch",
+      "category": "社交热搜",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://weibo.com"
+      },
+      "json_config": {
+        "items_path": "data.realtime",
+        "title_field": "word",
+        "link_template": "https://s.weibo.com/weibo?q=%23{word}%23",
+        "summary_field": "note"
+      }
+    },
+    {
+      "name": "B站热门",
+      "url": "https://api.bilibili.com/x/web-interface/popular",
+      "category": "音影热门",
+      "type": "json_api",
+      "enabled": true,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.bilibili.com"
+      },
+      "json_config": {
+        "items_path": "data.list",
+        "title_field": "title",
+        "link_field": "short_link_v2",
+        "summary_field": "desc",
+        "time_field": "pubdate"
+      }
+    }
+  ],
+  "settings": {
+    "max_items_per_source": 10,
+    "hours_lookback": 24,
+    "summary_max_length": 150
+  }
+}
